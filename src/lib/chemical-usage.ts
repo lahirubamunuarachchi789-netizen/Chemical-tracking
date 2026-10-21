@@ -25,6 +25,13 @@ export interface ChemicalUsageRow {
   after: string;
   /** Stock weight of the line before the chemical was loaded, in kg. */
   startWeight: string;
+  /**
+   * Remaining stock weight of the line once loading is finished, in kg.
+   *
+   * Entered by the operator: the sheet leaves this cell blank, so the app
+   * records what is typed rather than deriving it.
+   */
+  endWeight: string;
 }
 
 /** A range groups several lines that are loaded together. */
@@ -56,6 +63,7 @@ export function createEmptyRows(): ChemicalUsageRow[] {
       before: "",
       after: "",
       startWeight: "",
+      endWeight: "",
     })),
   );
 }
@@ -79,15 +87,13 @@ export function chemicalLoaded(row: ChemicalUsageRow): number | null {
 }
 
 /**
- * End weight of the line: `Start Weight - End Weight` as labelled on the
- * sheet, i.e. the stock left once the loaded chemical has been applied.
+ * End weight of the line, as entered by the operator.
+ *
+ * The sheet leaves the End Weight cell blank, so the value is typed in rather
+ * than derived. Returns null when the cell is empty or not a number.
  */
-export function endWeight(row: ChemicalUsageRow): number | null {
-  const start = parseWeight(row.startWeight);
-  const loaded = chemicalLoaded(row);
-
-  if (start === null || loaded === null) return null;
-  return start - loaded;
+export function enteredEndWeight(row: ChemicalUsageRow): number | null {
+  return parseWeight(row.endWeight);
 }
 
 /** Format a computed weight for display; empty string when not computable. */

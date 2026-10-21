@@ -13,7 +13,6 @@ import {
 
 import {
   CellInput,
-  ComputedCell,
   SelectField,
   TextField,
 } from "@/components/chemical-usage/form-controls";
@@ -21,7 +20,7 @@ import {
   chemicalLoaded,
   chemicalRanges,
   createEmptyRows,
-  endWeight,
+  enteredEndWeight,
   formatWeight,
   parseWeight,
   shifts,
@@ -88,7 +87,8 @@ function TotalChip({
  *
  * Layout mirrors the Excel sheet: a Date / Shift strip on top, then one table
  * per range with the `Chemical Loading` group (Chemical, Start Weight,
- * Before, After) and the computed `End Weight` column.
+ * Before, After) and the `End Weight` column, which the operator enters by
+ * hand once loading is finished.
  */
 export function ChemicalUsageForm() {
   const [date, setDate] = useState("");
@@ -118,12 +118,21 @@ export function ChemicalUsageForm() {
 
     for (const row of rows) {
       const loaded = chemicalLoaded(row);
-      const remaining = endWeight(row);
+      const remaining = enteredEndWeight(row);
 
-      if (row.chemical.trim() || row.startWeight.trim()) filled += 1;
+      if (
+        row.chemical.trim() ||
+        row.startWeight.trim() ||
+        row.endWeight.trim()
+      ) {
+        filled += 1;
+      }
       if (row.before.trim() && parseWeight(row.before) === null) invalid += 1;
       if (row.after.trim() && parseWeight(row.after) === null) invalid += 1;
       if (row.startWeight.trim() && parseWeight(row.startWeight) === null) {
+        invalid += 1;
+      }
+      if (row.endWeight.trim() && parseWeight(row.endWeight) === null) {
         invalid += 1;
       }
 
@@ -195,7 +204,7 @@ export function ChemicalUsageForm() {
             </div>
 
             <p className="ml-auto hidden rounded-md bg-sheet-50 px-2.5 py-1.5 text-[11px] font-medium text-sheet-700 lg:block">
-              End Weight = Start Weight − (After − Before)
+              End weight is entered manually after loading
             </p>
           </div>
 
@@ -323,11 +332,16 @@ export function ChemicalUsageForm() {
                         />
                       </td>
 
-                      {/* End Weight - computed */}
+                      {/* End Weight - entered by the operator */}
                       <td className="px-3 py-2.5">
-                        <ComputedCell
-                          value={formatWeight(endWeight(row)) || "—"}
-                          highlight={endWeight(row) !== null}
+                        <CellInput
+                          ariaLabel={`End weight for ${range.label} ${row.line}`}
+                          value={row.endWeight}
+                          placeholder="Text Box"
+                          inputMode="decimal"
+                          onChange={(value) =>
+                            updateRow(row.id, { endWeight: value })
+                          }
                         />
                       </td>
                     </tr>

@@ -1,7 +1,5 @@
 "use client";
 
-import type { ReactNode } from "react";
-
 const baseControl =
   "w-full rounded-lg border border-navy-200 bg-white px-3 py-2 text-sm text-navy-900 shadow-sm transition placeholder:text-navy-300 focus:border-navy-500 focus:outline-none focus:ring-2 focus:ring-navy-200 disabled:cursor-not-allowed disabled:bg-navy-50 disabled:text-navy-400";
 
@@ -113,27 +111,5 @@ export function CellInput({
       onChange={(event) => onChange(event.target.value)}
       className={`${baseControl} py-1.5 text-center`}
     />
-  );
-}
-
-/** Read-only cell that shows a computed value. */
-export function ComputedCell({
-  value,
-  highlight = false,
-}: {
-  value: ReactNode;
-  highlight?: boolean;
-}) {
-  return (
-    <div
-      className={[
-        "flex min-h-[38px] items-center justify-center rounded-lg border px-2 py-1.5 text-center text-sm font-semibold tabular-nums",
-        highlight
-          ? "border-sheet-300 bg-sheet-50 text-sheet-800"
-          : "border-dashed border-navy-200 bg-navy-50/70 text-navy-400",
-      ].join(" ")}
-    >
-      {value}
-    </div>
   );
 }
