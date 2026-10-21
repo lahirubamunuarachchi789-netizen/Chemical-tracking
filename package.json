@@ -6,10 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint src scripts --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "secrets:check": "node scripts/check-for-secrets.mjs --all",
-    "secrets:install-hook": "node scripts/check-for-secrets.mjs --install"
+    "secrets:install-hook": "node scripts/check-for-secrets.mjs --install",
+    "mock:supabase": "node scripts/mock-supabase.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

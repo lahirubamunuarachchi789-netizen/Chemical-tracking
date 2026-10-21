@@ -162,6 +162,34 @@ scripts/check-for-secrets.mjs                       Credential leak guard
 | `npm run typecheck`            | TypeScript check (no emit)             |
 | `npm run secrets:check`        | Scan all tracked files for credentials  |
 | `npm run secrets:install-hook` | Install the pre-commit guard           |
+| `npm run mock:supabase`        | Local mock of the Supabase REST API    |
+
+### Testing without a live Supabase project
+
+`scripts/mock-supabase.mjs` implements the small slice of the Supabase REST API
+that the app uses (`GET`/`POST`/`PATCH` on `public.users`). It lets you
+exercise register, login, logout, the legacy-password upgrade and the protected
+dashboard without touching a real database:
+
+```bash
+# terminal 1
+npm run mock:supabase
+
+# terminal 2 - point .env.local at the mock
+#   NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+#   NEXT_PUBLIC_SUPABASE_ANON_KEY=local-mock-anon-key
+#   SUPABASE_SERVICE_ROLE_KEY=local-mock-service-role-key
+npm run dev
+```
+
+Seed accounts via environment variables:
+
+```bash
+MOCK_SEED_USER=admin MOCK_SEED_PASSWORD=admin123 npm run mock:supabase
+MOCK_SEED_LEGACY_USER=olduser MOCK_SEED_LEGACY_PASSWORD=legacy123 npm run mock:supabase
+```
+
+> The mock is a development aid only - it is never used in production.
 
 ---
 

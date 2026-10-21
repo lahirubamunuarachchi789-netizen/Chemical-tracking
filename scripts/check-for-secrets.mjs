@@ -24,6 +24,18 @@ const repoRoot = execSync("git rev-parse --show-toplevel", {
   encoding: "utf8",
 }).trim();
 
+/**
+ * Values that clearly are not real credentials.
+ *
+ * The scanner must not flag `.env.example`, the README or the local mock
+ * server, all of which legitimately contain assignment lines with
+ * placeholder values.
+ */
+const PLACEHOLDER_VALUE = /^(your[-_]|YOUR[-_]|<|\$\{|xxx|replace|\.\.\.|local[-_]mock[-_]|changeme|example|dummy|placeholder)/i;
+
+/** Local addresses can never carry a real credential. */
+const LOCAL_ADDRESS = /^(https?:\/\/)?(localhost|127\.0\.0\.1|\[::1\])(:\d+)?/i;
+
 const RULES = [
   {
     name: "Supabase secret (sb_secret_) key",
@@ -37,17 +49,20 @@ const RULES = [
   {
     name: "Assigned SUPABASE_SERVICE_ROLE_KEY value",
     pattern: /SUPABASE_SERVICE_ROLE_KEY\s*=\s*(\S+)/,
-    // Ignore obvious placeholders such as `your-...`, `<...>` or `xxx`.
-    isPlaceholder: (value) =>
-      /^(YOUR_|your[-_]|<|\$\{|xxx|xxx|replace|\.\.\.)/i.test(value) ||
-      value === "your-supabase-service-role-key",
+    isPlaceholder: (value) => PLACEHOLDER_VALUE.test(value),
   },
   {
     name: "Assigned NEXT_PUBLIC_SUPABASE_ANON_KEY value",
     pattern: /NEXT_PUBLIC_SUPABASE_ANON_KEY\s*=\s*(\S+)/,
+    isPlaceholder: (value) => PLACEHOLDER_VALUE.test(value),
+  },
+  {
+    name: "Assigned NEXT_PUBLIC_SUPABASE_URL value",
+    pattern: /NEXT_PUBLIC_SUPABASE_URL\s*=\s*(\S+)/,
     isPlaceholder: (value) =>
-      /^(YOUR_|your[-_]|<|\$\{|xxx|replace|\.\.\.)/i.test(value) ||
-      value === "your-supabase-anon-key",
+      PLACEHOLDER_VALUE.test(value) ||
+      /^https:\/\/your[-_]/i.test(value) ||
+      LOCAL_ADDRESS.test(value),
   },
 ];
 
