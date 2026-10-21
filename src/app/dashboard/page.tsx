@@ -1,72 +1,59 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { FlaskConical } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 
-import { LogoutButton } from "@/components/auth/logout-button";
-import { clearSessionCookie, getSessionToken } from "@/lib/auth/cookies";
-import { verifySessionToken } from "@/lib/auth/session";
+import { navigationItems } from "@/lib/navigation";
 
 export const metadata: Metadata = { title: "Dashboard" };
-export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
-  const token = await getSessionToken();
-  const session = await verifySessionToken(token);
-
-  if (!session) {
-    // The cookie is present but invalid/expired - clear it so the browser
-    // stops sending it. Otherwise every visit to /dashboard would bounce
-    // straight back here again.
-    await clearSessionCookie();
-    redirect("/login");
-  }
-
+export default function DashboardPage() {
   return (
-    <main className="min-h-dvh bg-navy-50">
-      <header className="border-b border-navy-100 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-navy-800">
-              <FlaskConical className="h-5 w-5 text-white" aria-hidden="true" />
-            </span>
-            <div className="leading-tight">
-              <p className="text-sm font-bold text-navy-900">Concord ChemTrack</p>
-              <p className="text-[11px] text-navy-500">
-                Signed in as {session.username}
-              </p>
-            </div>
-          </div>
-
-          <LogoutButton />
-        </div>
-      </header>
-
-      <div className="mx-auto max-w-6xl px-5 py-10">
-        <h1 className="text-2xl font-bold tracking-tight text-navy-900">
-          Dashboard
-        </h1>
-        <p className="mt-2 text-sm text-navy-500">
-          Authentication is working. Chemical usage modules (records, reports,
-          inventory) will be added here next.
+    <div className="mx-auto max-w-6xl">
+      <div className="rounded-2xl bg-navy-900 px-6 py-8 text-white shadow-sm sm:px-10 sm:py-10">
+        <p className="text-[11px] font-semibold tracking-[0.16em] text-navy-300 uppercase">
+          Welcome back
         </p>
-
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[
-            "Chemical usage records",
-            "Consumption reports",
-            "Chemical master data",
-          ].map((title) => (
-            <div
-              key={title}
-              className="rounded-xl border border-navy-100 bg-white p-5 shadow-sm"
-            >
-              <div className="h-10 w-10 rounded-lg bg-navy-50" />
-              <p className="mt-4 text-sm font-semibold text-navy-900">{title}</p>
-              <p className="mt-1 text-xs text-navy-400">Coming soon</p>
-            </div>
-          ))}
-        </div>
+        <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+          Chemical Usage Tracking
+        </h1>
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-navy-200">
+          Record every chemical used on the production floor, monitor consumption
+          and keep the master catalogue accurate &mdash; all from one place.
+        </p>
       </div>
-    </main>
+
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {navigationItems.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className="group flex flex-col rounded-xl border border-navy-100 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-navy-200 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-navy-50 text-navy-800 transition group-hover:bg-navy-800 group-hover:text-white">
+              <item.icon
+                className="h-5 w-5"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+            </span>
+
+            <p className="mt-4 text-sm font-semibold text-navy-900">
+              {item.label}
+            </p>
+            <p className="mt-1.5 flex-1 text-xs leading-relaxed text-navy-500">
+              {item.description}
+            </p>
+
+            <span className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-navy-700">
+              Open module
+              <ArrowRight
+                className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
+                aria-hidden="true"
+              />
+            </span>
+          </Link>
+        ))}
+      </div>
+    </div>
   );
 }
