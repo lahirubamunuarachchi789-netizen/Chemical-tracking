@@ -20,6 +20,23 @@
   --color-brand-dark: var(--color-navy-950);
   --color-brand-light: var(--color-navy-500);
 
+  /* ---------------------------------------------------------------------
+     Sheet blue - the exact accent used on the Chemical Usage Excel sheet
+     (Office accent5 #4472C4 with a -25% tint = #335695). It sits between
+     navy-600 and navy-700 so the captured spreadsheet and the web app read
+     as one system.
+     --------------------------------------------------------------------- */
+  --color-sheet-50: #f1f5fa;
+  --color-sheet-100: #dde7f3;
+  --color-sheet-200: #bbcfe8;
+  --color-sheet-300: #90add9;
+  --color-sheet-400: #6b8dc6;
+  --color-sheet-500: #4e74ae;
+  --color-sheet-600: #335695;
+  --color-sheet-700: #294777;
+  --color-sheet-800: #213759;
+  --color-sheet-900: #192940;
+
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
