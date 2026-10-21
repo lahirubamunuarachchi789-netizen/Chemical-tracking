@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { FlaskConical } from "lucide-react";
 
 import { LogoutButton } from "@/components/auth/logout-button";
-import { getSessionToken } from "@/lib/auth/cookies";
+import { clearSessionCookie, getSessionToken } from "@/lib/auth/cookies";
 import { verifySessionToken } from "@/lib/auth/session";
 
 export const metadata: Metadata = { title: "Dashboard" };
@@ -14,6 +14,10 @@ export default async function DashboardPage() {
   const session = await verifySessionToken(token);
 
   if (!session) {
+    // The cookie is present but invalid/expired - clear it so the browser
+    // stops sending it. Otherwise every visit to /dashboard would bounce
+    // straight back here again.
+    await clearSessionCookie();
     redirect("/login");
   }
 

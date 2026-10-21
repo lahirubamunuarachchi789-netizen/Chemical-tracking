@@ -1,24 +1,38 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { SESSION_COOKIE_NAME } from "@/lib/auth/constants";
+import { isValidSessionToken } from "@/lib/auth/edge-session";
 
 /**
  * Route protection for the dashboard.
  *
- * The cookie is an httpOnly, signed JWT. Middleware can only check for its
- * presence (it cannot verify the signature without edge-compatible crypto),
- * so the real authorization check happens server-side in the dashboard page.
+ * The cookie is a signed JWT, so the Middleware verifies the signature and
+ * expiry (jose works on the Edge Runtime). Only a genuinely valid session is
+ * allowed through; anything else is treated as "not signed in".
+ *
+ * A stale, expired or tampered cookie is always cleared on the way out. That
+ * matters: without clearing it, `/login` would bounce to `/dashboard`, the
+ * dashboard would reject the invalid token and bounce back to `/login` - an
+ * endless redirect loop that locks the user out of the app entirely.
  */
-export function middleware(request: NextRequest) {
-  const hasSession = Boolean(request.cookies.get(SESSION_COOKIE_NAME)?.value);
+export async function middleware(request: NextRequest) {
+  const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+  const isAuthenticated = await isValidSessionToken(token);
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith("/dashboard") && !hasSession) {
+  if (pathname.startsWith("/dashboard") && !isAuthenticated) {
     const loginUrl = new URL("/login", request.url);
-    return NextResponse.redirect(loginUrl);
+    const response = NextResponse.redirect(loginUrl);
+
+    // Drop the unusable cookie so the next request starts clean.
+    if (token) {
+      response.cookies.delete(SESSION_COOKIE_NAME);
+    }
+
+    return response;
   }
 
-  if (pathname === "/login" && hasSession) {
+  if (pathname === "/login" && isAuthenticated) {
     const dashboardUrl = new URL("/dashboard", request.url);
     return NextResponse.redirect(dashboardUrl);
   }

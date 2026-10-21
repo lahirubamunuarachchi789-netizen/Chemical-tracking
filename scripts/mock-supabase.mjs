@@ -108,12 +108,23 @@ const server = createServer(async (req, res) => {
     };
     users.set(row.id, row);
 
-    const wantsRow =
-      (req.headers.prefer || "").includes("return=representation") ||
-      (req.headers.prefer || "").includes("return=minimal") === false;
+    // supabase-js `.insert(...).select(...)` asks for the new row back.
+    const wantsRow = (req.headers.prefer || "").includes(
+      "return=representation",
+    );
+
+    // PostgREST honours the `Accept` header. supabase-js `.single()` sends
+    // `application/vnd.pgrst.object+json`, which makes PostgREST return a
+    // single JSON object instead of an array.
+    const wantsSingleObject = (req.headers.accept || "").includes(
+      "application/vnd.pgrst.object+json",
+    );
 
     if (wantsRow) {
-      return send(res, 201, [{ id: row.id, username: row.username }], {
+      const payload = wantsSingleObject
+        ? { id: row.id, username: row.username }
+        : [{ id: row.id, username: row.username }];
+      return send(res, 201, payload, {
         "Content-Range": `0-0/*`,
       });
     }
@@ -132,7 +143,15 @@ const server = createServer(async (req, res) => {
     if (!row) return send(res, 200, [], { "Content-Range": `0-0/*` });
 
     Object.assign(row, body);
-    return send(res, 200, [{ id: row.id, username: row.username }], {
+
+    const wantsSingleObject = (req.headers.accept || "").includes(
+      "application/vnd.pgrst.object+json",
+    );
+    const payload = wantsSingleObject
+      ? { id: row.id, username: row.username }
+      : [{ id: row.id, username: row.username }];
+
+    return send(res, 200, payload, {
       "Content-Range": `0-0/*`,
     });
   }

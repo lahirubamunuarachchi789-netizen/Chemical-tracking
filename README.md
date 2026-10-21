@@ -91,9 +91,18 @@ supabase db execute --file supabase/seed.sql
 4. On success the server signs a **JWT** (`HS256`, 8 hour expiry) with
    `AUTH_SESSION_SECRET` and stores it in an `httpOnly`, `Secure`,
    `SameSite=Lax` cookie.
-5. `/dashboard` is protected by `src/middleware.ts` (edge) and re-verified
-   server-side on the page.
+5. `/dashboard` is protected by `src/middleware.ts` (edge). The middleware
+   verifies the JWT signature and expiry, and the page re-verifies it
+   server-side.
 6. The password hash is never returned to the client.
+
+### Session handling
+
+The session cookie is a signed JWT. The Edge middleware validates the
+signature and expiry (`src/lib/auth/edge-session.ts`), so an expired or
+tampered cookie is treated as "not signed in" and is **cleared** on the way
+out. Without that cleanup the app would enter an endless redirect loop
+(`/login` → `/dashboard` → `/login`) and lock the user out entirely.
 
 | Route                | Method | Purpose                          |
 | -------------------- | ------ | -------------------------------- |
@@ -141,6 +150,7 @@ src/
     logout-button.tsx                               Sign-out control
   lib/
     auth/                                           Password, session, cookies
+      edge-session.ts                               Edge-safe JWT verification
     supabase/                                       Browser + server clients
   middleware.ts                                     Edge route protection
 supabase/
