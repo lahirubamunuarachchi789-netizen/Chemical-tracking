@@ -257,6 +257,11 @@ export function ChemicalUsageForm({
       setSaveSuccess(true);
       setSavedRowsCount(result.inserted ?? 0);
       setSaved(true);
+
+      // Clear the entered form data after a successful save.
+      setRows(createEmptyRows());
+      setDate("");
+      setShift("");
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Unexpected error saving to Supabase.");
       setSubmitting(false);
