@@ -174,7 +174,12 @@ const WEIGHT_FIELD_LABELS: Record<WeightField, string> = {
 /** A validation problem detected on a single row. */
 export interface RowIssue {
   /** Machine-readable identifier of the problem. */
-  code: "unreadable" | "afterBelowBefore" | "startAboveEnd";
+  code:
+    | "unreadable"
+    | "afterBelowBefore"
+    | "startAboveEnd"
+    | "afterBelowEnd"
+    | "startBelowBefore";
   /** Cells involved, so the form knows which inputs to highlight. */
   fields: WeightField[];
   /** Human-readable description shown next to the offending row. */
@@ -184,12 +189,17 @@ export interface RowIssue {
 /**
  * Validate a single usage row.
  *
- * Two orderings are enforced once both sides hold readable numbers:
+ * Four orderings are enforced once both sides hold readable numbers:
  *
  *   - `Before` must be less than or equal to `After`, because the chemical
  *     loading is the difference between the two readings.
  *   - `Start Weight` must be less than or equal to `End Weight`, because the
  *     line can only get lighter once the chemical has been applied.
+ *   - `After` must be greater than or equal to `End Weight`, since the reading
+ *     taken immediately after loading cannot fall below the remaining stock.
+ *   - `Start Weight` must be greater than or equal to `Before`, since the
+ *     stock on hand at the start cannot be below the reading taken before
+ *     loading.
  *
  * A cell that is empty or unreadable is reported separately and is skipped by
  * the ordering checks, since there is nothing to compare it against.
@@ -232,6 +242,22 @@ export function validateRow(row: ChemicalUsageRow): RowIssue[] {
       code: "startAboveEnd",
       fields: ["startWeight", "endWeight"],
       message: "Start Weight must be less than or equal to End Weight.",
+    });
+  }
+
+  if (after !== null && end !== null && after < end) {
+    issues.push({
+      code: "afterBelowEnd",
+      fields: ["after", "endWeight"],
+      message: "After must be greater than or equal to End Weight.",
+    });
+  }
+
+  if (start !== null && before !== null && start < before) {
+    issues.push({
+      code: "startBelowBefore",
+      fields: ["startWeight", "before"],
+      message: "Start Weight must be greater than or equal to Before.",
     });
   }
 

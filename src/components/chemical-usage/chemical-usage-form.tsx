@@ -614,8 +614,10 @@ export function ChemicalUsageForm({
             />
             <span>
               {summary.ordering} {summary.ordering === 1 ? "line has" : "lines have"}{" "}
-              weights in the wrong order. Start Weight must be less than or equal to
-              End Weight, and Before must be less than or equal to After.
+              weights in the wrong order. Before must be less than or equal to
+              After, Start Weight must be less than or equal to End Weight, After
+              must be greater than or equal to End Weight, and Start Weight must
+              be greater than or equal to Before.
             </span>
           </p>
         ) : null}
