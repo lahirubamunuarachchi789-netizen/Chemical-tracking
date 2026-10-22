@@ -177,7 +177,7 @@ export interface RowIssue {
   code:
     | "unreadable"
     | "afterBelowBefore"
-    | "startAboveEnd"
+    | "startBelowEnd"
     | "afterBelowEnd"
     | "startBelowBefore";
   /** Cells involved, so the form knows which inputs to highlight. */
@@ -193,8 +193,8 @@ export interface RowIssue {
  *
  *   - `Before` must be less than or equal to `After`, because the chemical
  *     loading is the difference between the two readings.
- *   - `Start Weight` must be less than or equal to `End Weight`, because the
- *     line can only get lighter once the chemical has been applied.
+ *   - `Start Weight` must be greater than or equal to `End Weight`, because the
+ *     stock on hand at the start cannot be below the remaining stock.
  *   - `After` must be greater than or equal to `End Weight`, since the reading
  *     taken immediately after loading cannot fall below the remaining stock.
  *   - `Start Weight` must be greater than or equal to `Before`, since the
@@ -237,11 +237,11 @@ export function validateRow(row: ChemicalUsageRow): RowIssue[] {
     });
   }
 
-  if (start !== null && end !== null && start > end) {
+  if (start !== null && end !== null && start < end) {
     issues.push({
-      code: "startAboveEnd",
+      code: "startBelowEnd",
       fields: ["startWeight", "endWeight"],
-      message: "Start Weight must be less than or equal to End Weight.",
+      message: "Start Weight must be greater than or equal to End Weight.",
     });
   }
 
