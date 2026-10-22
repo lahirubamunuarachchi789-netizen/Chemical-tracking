@@ -17,6 +17,7 @@ export interface LoadingRecordInput {
   beforeWeight: number | null;
   afterWeight: number | null;
   endWeight: number | null;
+  createdAt: string | null;
 }
 
 /**
@@ -123,7 +124,7 @@ export async function saveChemicalLoadingRecords(
     "AfterWeight": input.afterWeight,
     "EndWeight": input.endWeight,
     "CreatedBy": finalCreatedBy,
-    // CreatedAt uses the database default (now()).
+    "CreatedAt": input.createdAt ?? null,
   }));
 
   const { error } = await supabase

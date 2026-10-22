@@ -184,7 +184,7 @@ export function ChemicalUsageForm({
       }
 
       // Build insert payload: skip completely empty lines.
-      const inputs: { rangeCode: string; lineCode: string; chemicalId: number | null; chemical: string | null; startWeight: number | null; beforeWeight: number | null; afterWeight: number | null; endWeight: number | null }[] = [];
+      const inputs: { rangeCode: string; lineCode: string; chemicalId: number | null; chemical: string | null; startWeight: number | null; beforeWeight: number | null; afterWeight: number | null; endWeight: number | null; createdAt: string | null }[] = [];
 
       for (const row of rows) {
         const hasChemical = row.chemical.trim() !== "";
@@ -237,6 +237,7 @@ export function ChemicalUsageForm({
           beforeWeight,
           afterWeight,
           endWeight,
+          createdAt: date || null,
         });
       }
 
