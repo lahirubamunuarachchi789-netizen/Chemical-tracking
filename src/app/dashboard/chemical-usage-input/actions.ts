@@ -12,6 +12,7 @@ export interface LoadingRecordInput {
   rangeCode: string;
   lineCode: string;
   chemicalId: number | null;
+  chemical: string | null;
   startWeight: number | null;
   beforeWeight: number | null;
   afterWeight: number | null;
@@ -116,6 +117,7 @@ export async function saveChemicalLoadingRecords(
     "RangeCode": input.rangeCode,
     "LineCode": input.lineCode,
     "ChemicalID": input.chemicalId,
+    "Chemical": input.chemical,
     "StartWeight": input.startWeight,
     "BeforeWeight": input.beforeWeight,
     "AfterWeight": input.afterWeight,
