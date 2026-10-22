@@ -15,6 +15,7 @@ export interface ConsumptionRecord {
   StartWeight: number | null;
   BeforeWeight: number | null;
   AfterWeight: number | null;
+  EndWeight: number | null;
   CreatedAt: string;
 }
 
@@ -30,7 +31,7 @@ export interface ConsumptionReportResult {
  * Filters by Injector (RangeCode), Tank (LineCode) and Chemical (Chemical).
  * Converts each UTC CreatedAt to Sri Lanka time, then filters by year and
  * ISO week. Groups remaining records by SL date and sums the daily usage:
- *   (AfterWeight - BeforeWeight) + StartWeight
+ *   [(AfterWeight - BeforeWeight) + StartWeight] - EndWeight
  */
 export async function fetchConsumptionReport(filters: {
   injector?: string;
@@ -44,7 +45,7 @@ export async function fetchConsumptionReport(filters: {
   let query = supabase
     .from('ChemicalLoadingRecords')
     .select(
-      'RangeCode, LineCode, Chemical, StartWeight, BeforeWeight, AfterWeight, CreatedAt'
+      'RangeCode, LineCode, Chemical, StartWeight, BeforeWeight, AfterWeight, EndWeight, CreatedAt'
     )
     .order('CreatedAt', { ascending: true });
 

@@ -105,15 +105,16 @@ export interface ConsumptionFilters {
 
 /**
  * Daily usage formula per record:
- *   (AfterWeight - BeforeWeight) + StartWeight
+ *   [(AfterWeight - BeforeWeight) + StartWeight] - EndWeight
  * Null weights are treated as 0.
  */
 export function calculateRecordUsage(record: {
   AfterWeight: number | null;
   BeforeWeight: number | null;
   StartWeight: number | null;
+  EndWeight: number | null;
 }): number {
-  return ((record.AfterWeight ?? 0) - (record.BeforeWeight ?? 0)) + (record.StartWeight ?? 0);
+  return ((record.AfterWeight ?? 0) - (record.BeforeWeight ?? 0) + (record.StartWeight ?? 0)) - (record.EndWeight ?? 0);
 }
 
 /** Usage intensity tier for colour coding. */
