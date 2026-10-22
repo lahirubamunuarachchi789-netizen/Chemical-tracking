@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Menu } from "lucide-react";
 
 import { AppSidebar } from "@/components/layout/app-sidebar";
+import { AppFooter } from "@/components/layout/app-footer";
 
 /**
  * Application shell for every signed-in page.
@@ -44,7 +45,7 @@ export function AppShell({
         isSigningOut={isSigningOut}
       />
 
-      <div className="lg:pl-72">
+      <div className="lg:pl-72 flex flex-col min-h-dvh">
         {/* -------------------------------------------------- Top bar */}
         <header className="sticky top-0 z-20 border-b border-navy-100 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
           <div className="flex items-center gap-3 px-5 py-4">
@@ -69,7 +70,8 @@ export function AppShell({
           </div>
         </header>
 
-        <main className="px-5 py-8 sm:py-10">{children}</main>
+        <main className="flex-1 px-5 py-8 sm:py-10">{children}</main>
+        <AppFooter />
       </div>
     </div>
   );

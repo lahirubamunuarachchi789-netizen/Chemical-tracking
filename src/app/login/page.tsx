@@ -10,6 +10,7 @@ import {
 
 import { AuthForm } from "@/components/auth/auth-form";
 import { BrandMark } from "@/components/auth/brand-mark";
+import { AppFooter } from "@/components/layout/app-footer";
 
 const highlights = [
   {
@@ -99,6 +100,7 @@ export default function LoginPage() {
             &copy; {new Date().getFullYear()} Concord Footwear (Pvt) Ltd.
             <br className="hidden sm:block" /> All rights reserved.
           </p>
+          <AppFooter />
         </div>
       </section>
     </main>
