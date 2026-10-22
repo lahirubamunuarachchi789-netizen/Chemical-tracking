@@ -125,7 +125,7 @@ export async function saveChemicalLoadingRecords(
   }));
 
   const { error } = await supabase
-    .from('"ChemicalLoadingRecords"')
+    .from('ChemicalLoadingRecords')
     .insert(rows as Record<string, unknown>[]);
 
   if (error) {
