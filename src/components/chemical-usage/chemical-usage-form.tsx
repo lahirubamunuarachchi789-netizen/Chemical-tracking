@@ -18,6 +18,7 @@ import {
   TextField,
 } from "@/components/chemical-usage/form-controls";
 import {
+  applyChemicalSelection,
   chemicalLoaded,
   chemicalRanges,
   chemicals,
@@ -30,6 +31,7 @@ import {
   type RowIssue,
   type WeightField,
 } from "@/lib/chemical-usage";
+import { useCellNavigation } from "@/components/chemical-usage/use-cell-navigation";
 
 /**
  * Blue band that mirrors the shaded cells of the Excel sheet.
@@ -100,10 +102,34 @@ export function ChemicalUsageForm() {
   const [rows, setRows] = useState<ChemicalUsageRow[]>(createEmptyRows);
   const [saved, setSaved] = useState(false);
 
+  /**
+   * Arrow-key navigation between the weight cells.
+   *
+   * The rows are flattened in the order they are rendered, so moving down
+   * from the last line of a range lands on the first line of the next one.
+   */
+  const rowIds = useMemo(() => rows.map((row) => row.id), [rows]);
+  const { register, handleKeyDown } = useCellNavigation(rowIds);
+
   function updateRow(id: string, patch: Partial<ChemicalUsageRow>) {
     setSaved(false);
     setRows((current) =>
       current.map((row) => (row.id === id ? { ...row, ...patch } : row)),
+    );
+  }
+
+  /**
+   * Record the chemical picked for a line.
+   *
+   * `No Chemical` also fills the four weight cells with zeros, so the sheet
+   * shows a line that was not loaded rather than an empty one.
+   */
+  function selectChemical(id: string, chemical: string) {
+    setSaved(false);
+    setRows((current) =>
+      current.map((row) =>
+        row.id === id ? applyChemicalSelection(row, chemical) : row,
+      ),
     );
   }
 
@@ -310,9 +336,7 @@ export function ChemicalUsageForm() {
                               ariaLabel={`Chemical for ${range.label} ${row.line}`}
                               value={row.chemical}
                               options={chemicals}
-                              onChange={(value) =>
-                                updateRow(row.id, { chemical: value })
-                              }
+                              onChange={(value) => selectChemical(row.id, value)}
                             />
                           </td>
 
@@ -323,6 +347,10 @@ export function ChemicalUsageForm() {
                               value={row.startWeight}
                               inputMode="decimal"
                               invalid={isInvalid(row, "startWeight")}
+                              ref={register(row.id, "startWeight")}
+                              navRow={row.id}
+                              navField="startWeight"
+                              onKeyDown={handleKeyDown}
                               onChange={(value) =>
                                 updateRow(row.id, { startWeight: value })
                               }
@@ -336,6 +364,10 @@ export function ChemicalUsageForm() {
                               value={row.before}
                               inputMode="decimal"
                               invalid={isInvalid(row, "before")}
+                              ref={register(row.id, "before")}
+                              navRow={row.id}
+                              navField="before"
+                              onKeyDown={handleKeyDown}
                               onChange={(value) =>
                                 updateRow(row.id, { before: value })
                               }
@@ -349,6 +381,10 @@ export function ChemicalUsageForm() {
                               value={row.after}
                               inputMode="decimal"
                               invalid={isInvalid(row, "after")}
+                              ref={register(row.id, "after")}
+                              navRow={row.id}
+                              navField="after"
+                              onKeyDown={handleKeyDown}
                               onChange={(value) =>
                                 updateRow(row.id, { after: value })
                               }
@@ -362,6 +398,10 @@ export function ChemicalUsageForm() {
                               value={row.endWeight}
                               inputMode="decimal"
                               invalid={isInvalid(row, "endWeight")}
+                              ref={register(row.id, "endWeight")}
+                              navRow={row.id}
+                              navField="endWeight"
+                              onKeyDown={handleKeyDown}
                               onChange={(value) =>
                                 updateRow(row.id, { endWeight: value })
                               }

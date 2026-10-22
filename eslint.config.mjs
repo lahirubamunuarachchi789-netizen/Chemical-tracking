@@ -18,6 +18,9 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      // End-to-end verification scripts (CommonJS dev aids, not app code)
+      "scripts/verify-nav*.cjs",
+      "scripts/shot.cjs",
     ],
   },
 ];

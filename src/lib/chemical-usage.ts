@@ -70,6 +70,22 @@ export const chemicals = [
 
 export type Chemical = (typeof chemicals)[number];
 
+/**
+ * Chemical that marks a line as not being loaded with anything.
+ *
+ * Choosing it means the four weight cells of that line carry no chemical
+ * movement, so the app fills them in with zeros.
+ */
+export const NO_CHEMICAL = "No Chemical";
+
+/** Weight cells that are forced to zero for a `No Chemical` line. */
+export const ZEROED_WEIGHT_FIELDS = [
+  "startWeight",
+  "before",
+  "after",
+  "endWeight",
+] as const satisfies readonly WeightField[];
+
 /** Build the empty row set that matches the sheet structure. */
 export function createEmptyRows(): ChemicalUsageRow[] {
   return chemicalRanges.flatMap((range) =>
@@ -84,6 +100,36 @@ export function createEmptyRows(): ChemicalUsageRow[] {
       endWeight: "",
     })),
   );
+}
+
+/**
+ * Apply a chemical choice to a row.
+ *
+ * Selecting `No Chemical` means the line was not loaded, so every weight cell
+ * of that row is set to `0`. Choosing any other chemical leaves the weight
+ * cells untouched, except when the line was previously set to `No Chemical`:
+ * the placeholder zeros are then cleared so the operator starts from a blank
+ * cell instead of editing on top of a `0`.
+ */
+export function applyChemicalSelection(
+  row: ChemicalUsageRow,
+  chemical: string,
+): ChemicalUsageRow {
+  if (chemical === NO_CHEMICAL) {
+    const zeroed: ChemicalUsageRow = { ...row, chemical };
+    for (const field of ZEROED_WEIGHT_FIELDS) {
+      zeroed[field] = "0";
+    }
+    return zeroed;
+  }
+
+  const cleared: ChemicalUsageRow = { ...row, chemical };
+  if (row.chemical === NO_CHEMICAL) {
+    for (const field of ZEROED_WEIGHT_FIELDS) {
+      cleared[field] = "";
+    }
+  }
+  return cleared;
 }
 
 /** Parse a weight cell. Returns null when the cell is empty or not a number. */

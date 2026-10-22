@@ -1,5 +1,7 @@
 "use client";
 
+import type { KeyboardEventHandler, Ref } from "react";
+
 const baseControl =
   "w-full rounded-lg border border-navy-200 bg-white px-3 py-2 text-sm text-navy-900 shadow-sm transition placeholder:text-navy-300 focus:border-navy-500 focus:outline-none focus:ring-2 focus:ring-navy-200 disabled:cursor-not-allowed disabled:bg-navy-50 disabled:text-navy-400";
 
@@ -100,6 +102,10 @@ export function CellInput({
   inputMode,
   ariaLabel,
   invalid = false,
+  ref,
+  navRow,
+  navField,
+  onKeyDown,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -108,16 +114,28 @@ export function CellInput({
   ariaLabel: string;
   /** Marks the cell as holding a value that failed validation. */
   invalid?: boolean;
+  /** Ref to the underlying input, used for arrow-key navigation. */
+  ref?: Ref<HTMLInputElement>;
+  /** Id of the row this cell belongs to; used for arrow-key navigation. */
+  navRow?: string;
+  /** Which column this cell is; used for arrow-key navigation. */
+  navField?: string;
+  /** Keyboard handler, used for arrow-key navigation. */
+  onKeyDown?: KeyboardEventHandler<HTMLInputElement>;
 }) {
   return (
     <input
+      ref={ref}
       type="text"
       inputMode={inputMode}
       value={value}
       placeholder={placeholder}
       aria-label={ariaLabel}
       aria-invalid={invalid || undefined}
+      data-nav-row={navRow}
+      data-nav-field={navField}
       onChange={(event) => onChange(event.target.value)}
+      onKeyDown={onKeyDown}
       className={[
         baseControl,
         "py-1.5 text-center",
