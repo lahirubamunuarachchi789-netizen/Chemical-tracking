@@ -94,12 +94,15 @@ export function CellInput({
   placeholder,
   inputMode,
   ariaLabel,
+  invalid = false,
 }: {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   inputMode?: "text" | "decimal" | "numeric";
   ariaLabel: string;
+  /** Marks the cell as holding a value that failed validation. */
+  invalid?: boolean;
 }) {
   return (
     <input
@@ -108,8 +111,18 @@ export function CellInput({
       value={value}
       placeholder={placeholder}
       aria-label={ariaLabel}
+      aria-invalid={invalid || undefined}
       onChange={(event) => onChange(event.target.value)}
-      className={`${baseControl} py-1.5 text-center`}
+      className={[
+        baseControl,
+        "py-1.5 text-center",
+        invalid
+          ? // `!` matters here: globals.css sets a global `* { border-color }`
+            // rule outside any cascade layer, so it outranks Tailwind's
+            // layered `border-*` utilities unless they are marked important.
+            "border-red-400! bg-red-50/60 text-red-800 focus:border-red-500! focus:ring-red-200"
+          : "",
+      ].join(" ")}
     />
   );
 }

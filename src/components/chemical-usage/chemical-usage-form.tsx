@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   AlertCircle,
@@ -22,9 +22,11 @@ import {
   createEmptyRows,
   enteredEndWeight,
   formatWeight,
-  parseWeight,
   shifts,
+  validateRow,
   type ChemicalUsageRow,
+  type RowIssue,
+  type WeightField,
 } from "@/lib/chemical-usage";
 
 /**
@@ -115,6 +117,8 @@ export function ChemicalUsageForm() {
     let end = 0;
     let filled = 0;
     let invalid = 0;
+    let ordering = 0;
+    const issuesByRow = new Map<string, RowIssue[]>();
 
     for (const row of rows) {
       const loaded = chemicalLoaded(row);
@@ -127,21 +131,31 @@ export function ChemicalUsageForm() {
       ) {
         filled += 1;
       }
-      if (row.before.trim() && parseWeight(row.before) === null) invalid += 1;
-      if (row.after.trim() && parseWeight(row.after) === null) invalid += 1;
-      if (row.startWeight.trim() && parseWeight(row.startWeight) === null) {
-        invalid += 1;
+
+      const issues = validateRow(row);
+      if (issues.length > 0) {
+        issuesByRow.set(row.id, issues);
       }
-      if (row.endWeight.trim() && parseWeight(row.endWeight) === null) {
-        invalid += 1;
+      for (const issue of issues) {
+        // Unreadable entries are counted per cell so the warning matches the
+        // number of values the operator has to correct.
+        if (issue.code === "unreadable") invalid += issue.fields.length;
+        else ordering += 1;
       }
 
       if (loaded !== null) chemical += loaded;
       if (remaining !== null) end += remaining;
     }
 
-    return { chemical, end, filled, invalid };
+    return { chemical, end, filled, invalid, ordering, issuesByRow };
   }, [rows]);
+
+  /** True when the given weight cell of a row holds a rejected value. */
+  function isInvalid(row: ChemicalUsageRow, field: WeightField): boolean {
+    const issues = summary.issuesByRow.get(row.id);
+    if (!issues) return false;
+    return issues.some((issue) => issue.fields.includes(field));
+  }
 
   return (
     <div className="mt-8 space-y-6">
@@ -275,77 +289,113 @@ export function ChemicalUsageForm() {
               <tbody>
                 {rows
                   .filter((row) => row.range === range.label)
-                  .map((row) => (
-                    <tr
-                      key={row.id}
-                      className="border-b border-navy-50 transition last:border-b-0 hover:bg-navy-50/40"
-                    >
-                      {/* Line */}
-                      <td className="px-3 py-2.5">
-                        <span className="inline-flex min-w-9 items-center justify-center rounded-md bg-sheet-100 px-2 py-1 text-xs font-bold text-sheet-800">
-                          {row.line}
-                        </span>
-                      </td>
+                  .map((row) => {
+                    const rowIssues = summary.issuesByRow.get(row.id) ?? [];
 
-                      {/* Chemical */}
-                      <td className="px-3 py-2.5">
-                        <CellInput
-                          ariaLabel={`Chemical for ${range.label} ${row.line}`}
-                          value={row.chemical}
-                          placeholder="Text Box"
-                          onChange={(value) => updateRow(row.id, { chemical: value })}
-                        />
-                      </td>
+                    return (
+                      <Fragment key={row.id}>
+                        <tr className="border-b border-navy-50 transition last:border-b-0 hover:bg-navy-50/40">
+                          {/* Line */}
+                          <td className="px-3 py-2.5">
+                            <span className="inline-flex min-w-9 items-center justify-center rounded-md bg-sheet-100 px-2 py-1 text-xs font-bold text-sheet-800">
+                              {row.line}
+                            </span>
+                          </td>
 
-                      {/* Start Weight */}
-                      <td className="px-3 py-2.5">
-                        <CellInput
-                          ariaLabel={`Start weight for ${range.label} ${row.line}`}
-                          value={row.startWeight}
-                          placeholder="Text Box"
-                          inputMode="decimal"
-                          onChange={(value) =>
-                            updateRow(row.id, { startWeight: value })
-                          }
-                        />
-                      </td>
+                          {/* Chemical */}
+                          <td className="px-3 py-2.5">
+                            <CellInput
+                              ariaLabel={`Chemical for ${range.label} ${row.line}`}
+                              value={row.chemical}
+                              placeholder="Text Box"
+                              onChange={(value) =>
+                                updateRow(row.id, { chemical: value })
+                              }
+                            />
+                          </td>
 
-                      {/* Before */}
-                      <td className="px-3 py-2.5">
-                        <CellInput
-                          ariaLabel={`Weight before loading for ${range.label} ${row.line}`}
-                          value={row.before}
-                          placeholder="Text Box"
-                          inputMode="decimal"
-                          onChange={(value) => updateRow(row.id, { before: value })}
-                        />
-                      </td>
+                          {/* Start Weight */}
+                          <td className="px-3 py-2.5">
+                            <CellInput
+                              ariaLabel={`Start weight for ${range.label} ${row.line}`}
+                              value={row.startWeight}
+                              placeholder="Text Box"
+                              inputMode="decimal"
+                              invalid={isInvalid(row, "startWeight")}
+                              onChange={(value) =>
+                                updateRow(row.id, { startWeight: value })
+                              }
+                            />
+                          </td>
 
-                      {/* After */}
-                      <td className="px-3 py-2.5">
-                        <CellInput
-                          ariaLabel={`Weight after loading for ${range.label} ${row.line}`}
-                          value={row.after}
-                          placeholder="Text Box"
-                          inputMode="decimal"
-                          onChange={(value) => updateRow(row.id, { after: value })}
-                        />
-                      </td>
+                          {/* Before */}
+                          <td className="px-3 py-2.5">
+                            <CellInput
+                              ariaLabel={`Weight before loading for ${range.label} ${row.line}`}
+                              value={row.before}
+                              placeholder="Text Box"
+                              inputMode="decimal"
+                              invalid={isInvalid(row, "before")}
+                              onChange={(value) =>
+                                updateRow(row.id, { before: value })
+                              }
+                            />
+                          </td>
 
-                      {/* End Weight - entered by the operator */}
-                      <td className="px-3 py-2.5">
-                        <CellInput
-                          ariaLabel={`End weight for ${range.label} ${row.line}`}
-                          value={row.endWeight}
-                          placeholder="Text Box"
-                          inputMode="decimal"
-                          onChange={(value) =>
-                            updateRow(row.id, { endWeight: value })
-                          }
-                        />
-                      </td>
-                    </tr>
-                  ))}
+                          {/* After */}
+                          <td className="px-3 py-2.5">
+                            <CellInput
+                              ariaLabel={`Weight after loading for ${range.label} ${row.line}`}
+                              value={row.after}
+                              placeholder="Text Box"
+                              inputMode="decimal"
+                              invalid={isInvalid(row, "after")}
+                              onChange={(value) =>
+                                updateRow(row.id, { after: value })
+                              }
+                            />
+                          </td>
+
+                          {/* End Weight - entered by the operator */}
+                          <td className="px-3 py-2.5">
+                            <CellInput
+                              ariaLabel={`End weight for ${range.label} ${row.line}`}
+                              value={row.endWeight}
+                              placeholder="Text Box"
+                              inputMode="decimal"
+                              invalid={isInvalid(row, "endWeight")}
+                              onChange={(value) =>
+                                updateRow(row.id, { endWeight: value })
+                              }
+                            />
+                          </td>
+                        </tr>
+
+                        {/* Inline explanation of what is wrong with this row. */}
+                        {rowIssues.length > 0 ? (
+                          <tr className="border-b border-navy-50 bg-red-50/50">
+                            <td colSpan={6} className="px-3 pb-3">
+                              <ul className="flex flex-col gap-1">
+                                {rowIssues.map((issue) => (
+                                  <li
+                                    key={issue.code}
+                                    className="flex items-start gap-1.5 text-xs font-medium text-red-700"
+                                  >
+                                    <AlertCircle
+                                      className="mt-0.5 h-3.5 w-3.5 shrink-0"
+                                      strokeWidth={2}
+                                      aria-hidden="true"
+                                    />
+                                    <span>{issue.message}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </td>
+                          </tr>
+                        ) : null}
+                      </Fragment>
+                    );
+                  })}
               </tbody>
             </table>
           </div>
@@ -387,6 +437,21 @@ export function ChemicalUsageForm() {
           </p>
         ) : null}
 
+        {summary.ordering > 0 ? (
+          <p className="mt-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
+            <AlertCircle
+              className="mt-0.5 h-4 w-4 shrink-0 text-red-600"
+              strokeWidth={1.8}
+              aria-hidden="true"
+            />
+            <span>
+              {summary.ordering} {summary.ordering === 1 ? "line has" : "lines have"}{" "}
+              weights in the wrong order. Start Weight must be less than or equal to
+              End Weight, and Before must be less than or equal to After.
+            </span>
+          </p>
+        ) : null}
+
         {saved ? (
           <p className="mt-4 flex items-center gap-2 rounded-xl border border-sheet-600 bg-sheet-600 px-4 py-3 text-xs font-semibold text-white">
             <CheckCircle2 className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden="true" />
@@ -407,7 +472,7 @@ export function ChemicalUsageForm() {
           <button
             type="button"
             onClick={() => setSaved(true)}
-            disabled={summary.invalid > 0}
+            disabled={summary.invalid > 0 || summary.ordering > 0}
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-sheet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sheet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-sheet-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Send className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />

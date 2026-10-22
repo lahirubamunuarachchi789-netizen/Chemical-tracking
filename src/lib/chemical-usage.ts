@@ -96,6 +96,84 @@ export function enteredEndWeight(row: ChemicalUsageRow): number | null {
   return parseWeight(row.endWeight);
 }
 
+/** Weight cells of a row that take part in a validation check. */
+export type WeightField = "before" | "after" | "startWeight" | "endWeight";
+
+/** Display name of each weight cell, used in validation messages. */
+const WEIGHT_FIELD_LABELS: Record<WeightField, string> = {
+  before: "Before",
+  after: "After",
+  startWeight: "Start Weight",
+  endWeight: "End Weight",
+};
+
+/** A validation problem detected on a single row. */
+export interface RowIssue {
+  /** Machine-readable identifier of the problem. */
+  code: "unreadable" | "afterBelowBefore" | "startAboveEnd";
+  /** Cells involved, so the form knows which inputs to highlight. */
+  fields: WeightField[];
+  /** Human-readable description shown next to the offending row. */
+  message: string;
+}
+
+/**
+ * Validate a single usage row.
+ *
+ * Two orderings are enforced once both sides hold readable numbers:
+ *
+ *   - `Before` must be less than or equal to `After`, because the chemical
+ *     loading is the difference between the two readings.
+ *   - `Start Weight` must be less than or equal to `End Weight`, because the
+ *     line can only get lighter once the chemical has been applied.
+ *
+ * A cell that is empty or unreadable is reported separately and is skipped by
+ * the ordering checks, since there is nothing to compare it against.
+ */
+export function validateRow(row: ChemicalUsageRow): RowIssue[] {
+  const issues: RowIssue[] = [];
+
+  const before = parseWeight(row.before);
+  const after = parseWeight(row.after);
+  const start = parseWeight(row.startWeight);
+  const end = parseWeight(row.endWeight);
+
+  const unreadable: WeightField[] = [];
+  if (row.before.trim() && before === null) unreadable.push("before");
+  if (row.after.trim() && after === null) unreadable.push("after");
+  if (row.startWeight.trim() && start === null) unreadable.push("startWeight");
+  if (row.endWeight.trim() && end === null) unreadable.push("endWeight");
+
+  if (unreadable.length > 0) {
+    const labels = unreadable.map((field) => WEIGHT_FIELD_LABELS[field]);
+    issues.push({
+      code: "unreadable",
+      fields: unreadable,
+      message:
+        `Could not read ${labels.join(", ")}. ` +
+        "Use plain numbers, for example 12.5.",
+    });
+  }
+
+  if (before !== null && after !== null && before > after) {
+    issues.push({
+      code: "afterBelowBefore",
+      fields: ["before", "after"],
+      message: "Before must be less than or equal to After.",
+    });
+  }
+
+  if (start !== null && end !== null && start > end) {
+    issues.push({
+      code: "startAboveEnd",
+      fields: ["startWeight", "endWeight"],
+      message: "Start Weight must be less than or equal to End Weight.",
+    });
+  }
+
+  return issues;
+}
+
 /** Format a computed weight for display; empty string when not computable. */
 export function formatWeight(value: number | null): string {
   if (value === null) return "";
