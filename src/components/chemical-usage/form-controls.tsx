@@ -3,6 +3,14 @@
 const baseControl =
   "w-full rounded-lg border border-navy-200 bg-white px-3 py-2 text-sm text-navy-900 shadow-sm transition placeholder:text-navy-300 focus:border-navy-500 focus:outline-none focus:ring-2 focus:ring-navy-200 disabled:cursor-not-allowed disabled:bg-navy-50 disabled:text-navy-400";
 
+/**
+ * Chevron used to mark a select as a dropdown.
+ *
+ * Inline SVG data URI so the control needs no extra asset or icon component.
+ */
+const selectChevron =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233c6cba' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")";
+
 /** Labelled text input used across the usage form. */
 export function TextField({
   label,
@@ -71,10 +79,7 @@ export function SelectField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         className={`${baseControl} mt-1.5 appearance-none bg-[length:1rem] bg-[right_0.75rem_center] bg-no-repeat pr-9`}
-        style={{
-          backgroundImage:
-            "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233c6cba' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",
-        }}
+        style={{ backgroundImage: selectChevron }}
       >
         <option value="">Select…</option>
         {options.map((option) => (
@@ -124,5 +129,56 @@ export function CellInput({
           : "",
       ].join(" ")}
     />
+  );
+}
+
+/**
+ * Compact dropdown for the table body.
+ *
+ * Mirrors {@link CellInput} so a row keeps a consistent height once a cell is
+ * turned into a picker.
+ */
+export function CellSelect({
+  value,
+  onChange,
+  options,
+  ariaLabel,
+  placeholder = "Select…",
+  invalid = false,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: readonly string[];
+  ariaLabel: string;
+  /** Label of the empty option shown when nothing is selected yet. */
+  placeholder?: string;
+  /** Marks the cell as holding a value that failed validation. */
+  invalid?: boolean;
+}) {
+  return (
+    <select
+      value={value}
+      aria-label={ariaLabel}
+      aria-invalid={invalid || undefined}
+      onChange={(event) => onChange(event.target.value)}
+      className={[
+        baseControl,
+        "appearance-none bg-[length:0.9rem] bg-[right_0.5rem_center] bg-no-repeat py-1.5 pr-7 pl-2 text-center",
+        invalid
+          ? // `!` matters here: globals.css sets a global `* { border-color }`
+            // rule outside any cascade layer, so it outranks Tailwind's
+            // layered `border-*` utilities unless they are marked important.
+            "border-red-400! bg-red-50/60 text-red-800 focus:border-red-500! focus:ring-red-200"
+          : "",
+      ].join(" ")}
+      style={{ backgroundImage: selectChevron }}
+    >
+      <option value="">{placeholder}</option>
+      {options.map((option) => (
+        <option key={option} value={option}>
+          {option}
+        </option>
+      ))}
+    </select>
   );
 }

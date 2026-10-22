@@ -17,7 +17,7 @@ export interface ChemicalUsageRow {
   range: string;
   /** Line within the range, e.g. `A1`. */
   line: string;
-  /** Chemical loaded into the line (free text - batch / chemical name). */
+  /** Chemical loaded into the line (chosen from the Chemical dropdown). */
   chemical: string;
   /** Weight of the chemical before loading, in kg. */
   before: string;
@@ -48,9 +48,27 @@ export const chemicalRanges: ChemicalRange[] = [
 ];
 
 /** Factory shifts offered in the Shift selector. */
-export const shifts = ["Morning", "Evening", "Night"] as const;
+export const shifts = ["Day", "Night"] as const;
 
 export type Shift = (typeof shifts)[number];
+
+/**
+ * Chemicals offered in the Chemical dropdown of every usage line.
+ *
+ * The list mirrors the chemicals actually issued by the tannery; `No Chemical`
+ * is used for lines that are loaded with anything else.
+ */
+export const chemicals = [
+  "BASF Midsole",
+  "Coim Midsole",
+  "Coim Outsole",
+  "Sample",
+  "US BASF",
+  "US Coim",
+  "No Chemical",
+] as const;
+
+export type Chemical = (typeof chemicals)[number];
 
 /** Build the empty row set that matches the sheet structure. */
 export function createEmptyRows(): ChemicalUsageRow[] {

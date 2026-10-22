@@ -13,12 +13,14 @@ import {
 
 import {
   CellInput,
+  CellSelect,
   SelectField,
   TextField,
 } from "@/components/chemical-usage/form-controls";
 import {
   chemicalLoaded,
   chemicalRanges,
+  chemicals,
   createEmptyRows,
   enteredEndWeight,
   formatWeight,
@@ -304,10 +306,10 @@ export function ChemicalUsageForm() {
 
                           {/* Chemical */}
                           <td className="px-3 py-2.5">
-                            <CellInput
+                            <CellSelect
                               ariaLabel={`Chemical for ${range.label} ${row.line}`}
                               value={row.chemical}
-                              placeholder="Text Box"
+                              options={chemicals}
                               onChange={(value) =>
                                 updateRow(row.id, { chemical: value })
                               }
@@ -319,7 +321,6 @@ export function ChemicalUsageForm() {
                             <CellInput
                               ariaLabel={`Start weight for ${range.label} ${row.line}`}
                               value={row.startWeight}
-                              placeholder="Text Box"
                               inputMode="decimal"
                               invalid={isInvalid(row, "startWeight")}
                               onChange={(value) =>
@@ -333,7 +334,6 @@ export function ChemicalUsageForm() {
                             <CellInput
                               ariaLabel={`Weight before loading for ${range.label} ${row.line}`}
                               value={row.before}
-                              placeholder="Text Box"
                               inputMode="decimal"
                               invalid={isInvalid(row, "before")}
                               onChange={(value) =>
@@ -347,7 +347,6 @@ export function ChemicalUsageForm() {
                             <CellInput
                               ariaLabel={`Weight after loading for ${range.label} ${row.line}`}
                               value={row.after}
-                              placeholder="Text Box"
                               inputMode="decimal"
                               invalid={isInvalid(row, "after")}
                               onChange={(value) =>
@@ -361,7 +360,6 @@ export function ChemicalUsageForm() {
                             <CellInput
                               ariaLabel={`End weight for ${range.label} ${row.line}`}
                               value={row.endWeight}
-                              placeholder="Text Box"
                               inputMode="decimal"
                               invalid={isInvalid(row, "endWeight")}
                               onChange={(value) =>
