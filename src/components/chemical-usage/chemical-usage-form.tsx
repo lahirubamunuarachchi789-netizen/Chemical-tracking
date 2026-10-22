@@ -32,6 +32,7 @@ import {
   type WeightField,
 } from "@/lib/chemical-usage";
 import { useCellNavigation } from "@/components/chemical-usage/use-cell-navigation";
+import { saveChemicalLoadingRecords, getChemicalId } from "@/app/dashboard/chemical-usage-input/actions";
 
 /**
  * Blue band that mirrors the shaded cells of the Excel sheet.
@@ -96,11 +97,22 @@ function TotalChip({
  * Before, After) and the `End Weight` column, which the operator enters by
  * hand once loading is finished.
  */
-export function ChemicalUsageForm() {
+export function ChemicalUsageForm({
+  createdBy,
+}: {
+  createdBy: string | null;
+}) {
   const [date, setDate] = useState("");
   const [shift, setShift] = useState("");
   const [rows, setRows] = useState<ChemicalUsageRow[]>(createEmptyRows);
   const [saved, setSaved] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [savedRowsCount, setSavedRowsCount] = useState(0);
+
+  /** One UUID per loading session, shared by every record saved from this form. */
+  const batchId = useMemo(() => crypto.randomUUID(), []);
 
   /**
    * Arrow-key navigation between the weight cells.
@@ -138,6 +150,118 @@ export function ChemicalUsageForm() {
     setShift("");
     setRows(createEmptyRows());
     setSaved(false);
+    setSubmitting(false);
+    setSaveError(null);
+    setSaveSuccess(false);
+    setSavedRowsCount(0);
+  }
+
+  /**
+   * Round a weight to 3 decimal places for NUMERIC(18,3) compatibility.
+   */
+  function round3(value: number): number {
+    return Math.round(value * 1000) / 1000;
+  }
+
+  /**
+   * Save all non-empty rows to Supabase as one loading session (one BatchID).
+   * Skips completely empty lines, maps chemical names to integer IDs,
+   * prevents duplicate submissions, and reports success or error.
+   */
+  async function handleSubmit() {
+    if (submitting) return;
+    setSubmitting(true);
+    setSaveError(null);
+    setSaveSuccess(false);
+
+    try {
+      // Resolve chemical names to integer IDs (may throw).
+      const chemicalIdByName = new Map<string, number | null>();
+      for (const row of rows) {
+        if (!chemicalIdByName.has(row.chemical)) {
+          chemicalIdByName.set(row.chemical, await getChemicalId(row.chemical));
+        }
+      }
+
+      // Build insert payload: skip completely empty lines.
+      const inputs: { rangeCode: string; lineCode: string; chemicalId: number | null; startWeight: number | null; beforeWeight: number | null; afterWeight: number | null; endWeight: number | null }[] = [];
+
+      for (const row of rows) {
+        const hasChemical = row.chemical.trim() !== "";
+        const hasStart = row.startWeight.trim() !== "";
+        const hasBefore = row.before.trim() !== "";
+        const hasAfter = row.after.trim() !== "";
+        const hasEnd = row.endWeight.trim() !== "";
+
+        // Skip completely empty lines.
+        if (!hasChemical && !hasStart && !hasBefore && !hasAfter && !hasEnd) {
+          continue;
+        }
+
+        // Validate numeric inputs: any non-empty weight cell must be a valid number.
+        const startWeight = hasStart ? (() => {
+          const v = parseFloat(row.startWeight);
+          return Number.isFinite(v) ? round3(v) : null;
+        })() : null;
+        const beforeWeight = hasBefore ? (() => {
+          const v = parseFloat(row.before);
+          return Number.isFinite(v) ? round3(v) : null;
+        })() : null;
+        const afterWeight = hasAfter ? (() => {
+          const v = parseFloat(row.after);
+          return Number.isFinite(v) ? round3(v) : null;
+        })() : null;
+        const endWeight = hasEnd ? (() => {
+          const v = parseFloat(row.endWeight);
+          return Number.isFinite(v) ? round3(v) : null;
+        })() : null;
+
+        // If a weight cell was filled but unreadable, reject the whole save.
+        if (
+          (hasStart && startWeight === null) ||
+          (hasBefore && beforeWeight === null) ||
+          (hasAfter && afterWeight === null) ||
+          (hasEnd && endWeight === null)
+        ) {
+          setSaveError("Please fix unreadable weight values before saving.");
+          setSubmitting(false);
+          return;
+        }
+
+        inputs.push({
+          rangeCode: row.range,
+          lineCode: row.line,
+          chemicalId: chemicalIdByName.get(row.chemical) ?? null,
+          startWeight,
+          beforeWeight,
+          afterWeight,
+          endWeight,
+        });
+      }
+
+      if (inputs.length === 0) {
+        setSaveError("No data to save. Enter at least one line with a chemical or weight.");
+        setSubmitting(false);
+        return;
+      }
+
+      const result = await saveChemicalLoadingRecords(batchId, inputs, createdBy);
+
+      if (!result.success) {
+        setSaveError(result.error || "Failed to save to Supabase.");
+        setSubmitting(false);
+        return;
+      }
+
+      setSaveSuccess(true);
+      setSavedRowsCount(result.inserted ?? 0);
+      setSaved(true);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Unexpected error saving to Supabase.");
+      setSubmitting(false);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   const summary = useMemo(() => {
@@ -490,6 +614,20 @@ export function ChemicalUsageForm() {
           </p>
         ) : null}
 
+        {saveSuccess ? (
+          <p className="mt-4 flex items-center gap-2 rounded-xl border border-sheet-600 bg-sheet-600 px-4 py-3 text-xs font-semibold text-white">
+            <CheckCircle2 className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden="true" />
+            Saved to database — {savedRowsCount} record{savedRowsCount === 1 ? "" : "s"} written to ChemicalLoadingRecords.
+          </p>
+        ) : null}
+
+        {saveError ? (
+          <p className="mt-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" strokeWidth={1.8} aria-hidden="true" />
+            <span>Save failed: {saveError}</span>
+          </p>
+        ) : null}
+
         {saved ? (
           <p className="mt-4 flex items-center gap-2 rounded-xl border border-sheet-600 bg-sheet-600 px-4 py-3 text-xs font-semibold text-white">
             <CheckCircle2 className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden="true" />
@@ -509,12 +647,21 @@ export function ChemicalUsageForm() {
 
           <button
             type="button"
-            onClick={() => setSaved(true)}
-            disabled={summary.invalid > 0 || summary.ordering > 0}
+            onClick={handleSubmit}
+            disabled={submitting || summary.invalid > 0 || summary.ordering > 0}
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-sheet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sheet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-sheet-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Send className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
-            Submit usage
+            {submitting ? (
+              <>
+                <span className="animate-spin block h-4 w-4 border-2 border-white/30 border-t-white rounded-full" aria-hidden="true" />
+                Saving…
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+                Submit usage
+              </>
+            )}
           </button>
         </div>
       </div>

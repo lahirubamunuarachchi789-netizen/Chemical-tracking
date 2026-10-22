@@ -3,10 +3,16 @@ import { ClipboardList } from "lucide-react";
 
 import { ChemicalUsageForm } from "@/components/chemical-usage/chemical-usage-form";
 import { PageHeader } from "@/components/layout/page-header";
+import { getSessionToken } from "@/lib/auth/cookies";
+import { verifySessionToken } from "@/lib/auth/session";
 
 export const metadata: Metadata = { title: "Chemical Usage Input" };
 
-export default function ChemicalUsageInputPage() {
+export default async function ChemicalUsageInputPage() {
+  const token = await getSessionToken();
+  const session = await verifySessionToken(token);
+  const createdBy = session?.username ?? null;
+
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader
@@ -15,7 +21,7 @@ export default function ChemicalUsageInputPage() {
         icon={ClipboardList}
       />
 
-      <ChemicalUsageForm />
+      <ChemicalUsageForm createdBy={createdBy} />
     </div>
   );
 }
