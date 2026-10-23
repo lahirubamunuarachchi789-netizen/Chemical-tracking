@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Domain model for the Chemical Usage Input sheet.
  *
  * Mirrors the layout of the "Guston Group - Classification" Excel sheet:
@@ -194,11 +194,6 @@ export interface RowIssue {
  *     loading is the difference between the two readings.
  *   - `Start Weight` must be greater than or equal to `End Weight`, because the
  *     stock on hand at the start cannot be below the remaining stock.
- *   - `After` must be greater than or equal to `End Weight`, since the reading
- *     taken immediately after loading cannot fall below the remaining stock.
- *   - `Start Weight` must be greater than or equal to `Before`, since the
- *     stock on hand at the start cannot be below the reading taken before
- *     loading.
  *
  * A cell that is empty or unreadable is reported separately and is skipped by
  * the ordering checks, since there is nothing to compare it against.
