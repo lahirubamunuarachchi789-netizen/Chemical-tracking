@@ -107,7 +107,7 @@ export function ConsumptionReportView() {
         </section>
       )}
 
-      {# No search applied yet #}
+      {/* No search applied yet */}
       {!hasSearched && !searching && (
         <section className="rounded-2xl border border-dashed border-navy-200 bg-navy-50/60 px-8 py-12 text-center">
           <AlertCircle className="mx-auto h-10 w-10 text-navy-300" aria-hidden="true" />
