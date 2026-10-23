@@ -100,9 +100,20 @@ export function ConsumptionReportView() {
       {hasSearched && !error && results.length === 0 && (
         <section className="rounded-2xl border border-dashed border-navy-200 bg-navy-50/60 px-8 py-12 text-center">
           <AlertCircle className="mx-auto h-10 w-10 text-navy-300" aria-hidden="true" />
-          <h3 className="mt-4 text-lg font-semibold text-navy-900">No records found</h3>
+          <h3 className="mt-4 text-lg font-semibold text-navy-900">Data Not Found</h3>
           <p className="mt-1 text-sm text-navy-500">
-            Try adjusting the injector, tank, chemical, week or year filters.
+            No consumption data found for the selected filters. Try adjusting the injector, tank, chemical, week or year filters.
+          </p>
+        </section>
+      )}
+
+      {# No search applied yet #}
+      {!hasSearched && !searching && (
+        <section className="rounded-2xl border border-dashed border-navy-200 bg-navy-50/60 px-8 py-12 text-center">
+          <AlertCircle className="mx-auto h-10 w-10 text-navy-300" aria-hidden="true" />
+          <h3 className="mt-4 text-lg font-semibold text-navy-900">No Search Applied</h3>
+          <p className="mt-1 text-sm text-navy-500">
+            Set filters above to search consumption data.
           </p>
         </section>
       )}
