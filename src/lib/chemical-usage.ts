@@ -188,12 +188,13 @@ export interface RowIssue {
 /**
  * Validate a single usage row.
  *
- * Four orderings are enforced once both sides hold readable numbers:
+ * Two orderings are enforced once all weight cells hold readable numbers:
  *
  *   - `Before` must be less than or equal to `After`, because the chemical
  *     loading is the difference between the two readings.
- *   - `Start Weight` must be greater than or equal to `End Weight`, because the
- *     stock on hand at the start cannot be below the remaining stock.
+ *   - `Start Weight + (After − Before)` must be greater than or equal to
+ *     `End Weight`, because the starting stock plus the chemical loaded cannot
+ *     be below the remaining stock.
  *
  * A cell that is empty or unreadable is reported separately and is skipped by
  * the ordering checks, since there is nothing to compare it against.
@@ -231,17 +232,20 @@ export function validateRow(row: ChemicalUsageRow): RowIssue[] {
     });
   }
 
-  if (start !== null && end !== null && start < end) {
+  // Effective start weight = Start Weight + chemical loaded (After - Before)
+  const effectiveStart =
+    start !== null && after !== null && before !== null
+      ? start + (after - before)
+      : null;
+
+  if (effectiveStart !== null && end !== null && effectiveStart < end) {
     issues.push({
       code: "startBelowEnd",
       fields: ["startWeight", "endWeight"],
-      message: "Start Weight must be greater than or equal to End Weight.",
+      message:
+        "Start Weight plus chemical loaded must be greater than or equal to End Weight.",
     });
   }
-
-  
-
-  
 
   return issues;
 }

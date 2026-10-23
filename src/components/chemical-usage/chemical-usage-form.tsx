@@ -616,7 +616,7 @@ export function ChemicalUsageForm({
             <span>
               {summary.ordering} {summary.ordering === 1 ? "line has" : "lines have"}{" "}
               weights in the wrong order. Before must be less than or equal to
-              After, Start Weight must be greater than or equal to End Weight.
+              After, Start Weight plus chemical loaded must be greater than or equal to End Weight.
             </span>
           </p>
         ) : null}
