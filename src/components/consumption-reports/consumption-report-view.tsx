@@ -296,9 +296,9 @@ function ActivityIcon() {
   );
 }
 
-/** Weight value with a fixed 2-decimal readout; "â€”" when the cell is empty. */
+/** Weight value with a fixed 2-decimal readout; "—" when the cell is empty. */
 function formatWeight(value: number | null): string {
-  return value === null || value === undefined ? 'â€”' : value.toFixed(2);
+  return value === null || value === undefined ? '—' : value.toFixed(2);
 }
 
 /**
@@ -350,7 +350,7 @@ function DayDetailDialog({
         <div className="flex items-start justify-between gap-3 border-b border-navy-100 bg-navy-50/60 px-4 py-3 sm:px-6">
           <div className="min-w-0">
             <p className="text-[10px] font-semibold tracking-wider text-navy-500 uppercase">
-              Daily report â€” detail view
+              Daily report — detail view
             </p>
             <h3
               id="day-detail-title"
@@ -359,9 +359,9 @@ function DayDetailDialog({
               {day.formattedDate}
             </h3>
             <p className="mt-0.5 text-xs text-navy-500">
-              {day.recordCount} record{day.recordCount === 1 ? '' : 's'} Â·{' '}
+              {day.recordCount} record{day.recordCount === 1 ? '' : 's'} ·{' '}
               {day.totalUsage.toFixed(2)} kg total usage
-              {day.chemical ? ` Â· ${day.chemical}` : ''}
+              {day.chemical ? ` · ${day.chemical}` : ''}
             </p>
           </div>
           <button
@@ -382,7 +382,7 @@ function DayDetailDialog({
                 className="h-5 w-5 animate-spin text-navy-500"
                 aria-hidden="true"
               />
-              <p className="text-sm text-navy-500">Loading recordsâ€¦</p>
+              <p className="text-sm text-navy-500">Loading records…</p>
             </div>
           )}
 
@@ -440,10 +440,10 @@ function DayDetailDialog({
                     >
                       <td className="px-3 py-2">
                         <span className="font-medium">
-                          {record.LineCode || 'â€”'}
+                          {record.LineCode || '—'}
                         </span>
                         <span className="block text-xs text-navy-500">
-                          {record.RangeCode || 'â€”'}
+                          {record.RangeCode || '—'}
                         </span>
                       </td>
                       <td className="px-3 py-2 tabular-nums">
