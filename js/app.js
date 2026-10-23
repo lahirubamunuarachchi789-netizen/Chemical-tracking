@@ -8,15 +8,18 @@
   const closeBtn = document.getElementById('close-detail');
   const dailyCard = document.querySelector('[data-report="daily"]');
 
-  // Computed-value field ids
-  const LOADED_TEXT = document.getElementById('txt-loaded');
-  const STARTING_TEXT = document.getElementById('txt-starting');
-  const END_VALUE = document.getElementById('val-end');
+  if (!detailPanel || !backdrop || !closeBtn || !dailyCard) {
+    return;
+  }
 
-  // Open the Daily detail panel
+  // ------------------------------------------------------------------
+  // Open / close the Daily detail panel
+  // ------------------------------------------------------------------
   function openDetail() {
     detailPanel.hidden = false;
-    // Reflow to enable the CSS transition
+    detailPanel.removeAttribute('aria-hidden');
+    detailPanel.setAttribute('aria-modal', 'true');
+    // Force reflow then enable the fade-in transition
     requestAnimationFrame(() => {
       detailPanel.style.opacity = '1';
       detailPanel.style.pointerEvents = 'auto';
@@ -25,12 +28,12 @@
     closeBtn.focus();
   }
 
-  // Close the Daily detail panel
   function closeDetail() {
     detailPanel.style.opacity = '0';
     detailPanel.style.pointerEvents = 'none';
+    detailPanel.setAttribute('aria-hidden', 'true');
+    detailPanel.removeAttribute('aria-modal');
     document.body.style.overflow = '';
-    // Keep `hidden` off until transition ends so the fade plays on close too
     setTimeout(() => {
       if (detailPanel.style.opacity === '0') {
         detailPanel.hidden = true;
@@ -39,14 +42,24 @@
     dailyCard.focus();
   }
 
-  // Card click / keyboard activation
-  dailyCard.addEventListener('click', openDetail);
+  // Card click / keyboard activation (Enter / Space)
+  dailyCard.addEventListener('click', (e) => {
+    e.preventDefault();
+    openDetail();
+  });
+
   dailyCard.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       openDetail();
     }
   });
+
+  // Support touch taps on mobile
+  dailyCard.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    openDetail();
+  }, { passive: false });
 
   closeBtn.addEventListener('click', closeDetail);
   backdrop.addEventListener('click', closeDetail);
@@ -75,9 +88,13 @@
     const starting = start + loaded;
     const end = starting;
 
-    LOADED_TEXT.textContent = loaded;
-    STARTING_TEXT.textContent = starting;
-    END_VALUE.textContent = end;
+    const loadedText = document.getElementById('txt-loaded');
+    const startingText = document.getElementById('txt-starting');
+    const endValue = document.getElementById('val-end');
+
+    if (loadedText)  loadedText.textContent = loaded;
+    if (startingText) startingText.textContent = starting;
+    if (endValue)    endValue.textContent = end;
   }
 
   const inputs = document.querySelectorAll('.cell-input');
@@ -89,7 +106,7 @@
   recompute();
 
   // ------------------------------------------------------------------
-  // Export (placeholder – prints a CSV to console; hook up a real export as needed)
+  // Export (placeholder – prints a CSV to console)
   // ------------------------------------------------------------------
   document.getElementById('export-detail').addEventListener('click', () => {
     const rows = [];
