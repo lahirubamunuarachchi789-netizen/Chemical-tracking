@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   FlaskConical,
   RotateCcw,
-  Scale,
   Send,
 } from "lucide-react";
 
@@ -23,7 +22,6 @@ import {
   chemicalRanges,
   chemicals,
   createEmptyRows,
-  enteredEndWeight,
   formatWeight,
   shifts,
   validateRow,
@@ -273,7 +271,6 @@ export function ChemicalUsageForm({
 
   const summary = useMemo(() => {
     let chemical = 0;
-    let end = 0;
     let filled = 0;
     let invalid = 0;
     let ordering = 0;
@@ -281,7 +278,6 @@ export function ChemicalUsageForm({
 
     for (const row of rows) {
       const loaded = chemicalLoaded(row);
-      const remaining = enteredEndWeight(row);
 
       if (
         row.chemical.trim() ||
@@ -303,10 +299,9 @@ export function ChemicalUsageForm({
       }
 
       if (loaded !== null) chemical += loaded;
-      if (remaining !== null) end += remaining;
     }
 
-    return { chemical, end, filled, invalid, ordering, issuesByRow };
+    return { chemical, filled, invalid, ordering, issuesByRow };
   }, [rows]);
 
   /** True when the given weight cell of a row holds a rejected value. */
@@ -579,11 +574,6 @@ export function ChemicalUsageForm({
             value={formatWeight(summary.chemical)}
             accent
             icon={FlaskConical}
-          />
-          <TotalChip
-            label="End weight total"
-            value={formatWeight(summary.end)}
-            icon={Scale}
           />
           <TotalChip
             label="Lines completed"
