@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Consumption Reports — Daily</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="app-brand">
+        <span class="brand-mark">CR</span>
+        <span class="brand-name">Consumption Reports</span>
+      </div>
+      <div class="header-actions">
+        <button class="btn-icon" aria-label="Notifications">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </button>
+        <button class="btn-icon" aria-label="Profile">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4zm0 2c-2.6 0-5 1.3-5 3v3c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2v-3c0-1.7-2.4-3-5-3z"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="page-section">
+      <div class="section-header">
+        <h1 class="page-title">Consumption Reports</h1>
+        <p class="page-subtitle">Track weight intake across reporting periods. Select a report type to view its detailed breakdown.</p>
+      </div>
+
+      <div class="cards-grid" role="region" aria-label="Report types">
+        <article class="report-card card-daily" data-report="daily" tabindex="0" role="button" aria-pressed="false" aria-label="Open Daily report details">
+          <div class="card-body">
+            <div class="card-badge">Daily</div>
+            <h2 class="card-title">Daily Consumption</h2>
+            <p class="card-desc">Per-day weight loading summary — Start, Before, After, Loaded, and End weights.</p>
+            <div class="card-meta">
+              <span class="meta-chip">Updated just now</span>
+              <span class="meta-chip">Ready to view</span>
+            </div>
+            <div class="card-arrow">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l8 6-8 6z"/></svg>
+            </div>
+          </div>
+        </article>
+        <article class="report-card" data-report="weekly" tabindex="0" role="button" aria-pressed="false" aria-label="Open Weekly report details">
+          <div class="card-body">
+            <div class="card-badge">Weekly</div>
+            <h2 class="card-title">Weekly Consumption</h2>
+            <p class="card-desc">Aggregated weight loading over a 7-day rolling window.</p>
+            <div class="card-meta">
+              <span class="meta-chip">Updated 2h ago</span>
+              <span class="meta-chip">Coming soon</span>
+            </div>
+            <div class="card-arrow">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l8 6-8 6z"/></svg>
+            </div>
+          </div>
+        </article>
+
+        <article class="report-card" data-report="monthly" tabindex="0" role="button" aria-pressed="false" aria-label="Open Monthly report details">
+          <div class="card-body">
+            <div class="card-badge">Monthly</div>
+            <h2 class="card-title">Monthly Consumption</h2>
+            <p class="card-desc">Monthly weight loading totals and trend analysis.</p>
+            <div class="card-meta">
+              <span class="meta-chip">Updated today</span>
+              <span class="meta-chip">Coming soon</span>
+            </div>
+            <div class="card-arrow">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l8 6-8 6z"/></svg>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <section class="detail-panel" id="daily-detail" role="dialog" aria-modal="true" aria-label="Daily report details" hidden>
+    <div class="detail-backdrop" id="detail-backdrop"></div>
+    <div class="detail-content">
+      <div class="detail-header">
+        <button class="close-btn" id="close-detail" aria-label="Close Daily report">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+        <div class="detail-title-wrap">
+          <div class="detail-kicker">Daily Report — Detail View</div>
+          <h2 class="detail-title">Daily Consumption Breakdown</h2>
+        </div>
+        <button class="btn-export" id="export-detail" aria-label="Export report data">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20h14v-2H5v2zM19 9H5V7h14v2z"/><path d="M12 12l-4 4h3v8h2v-8h3l-4-4z"/></svg>
+          Export
+        </button>
+      </div>
+
+      <div class="detail-body">
+        <div class="table-wrap">
+          <table class="report-table" aria-label="Daily weight consumption values">
+            <caption>Values shown are representative samples; editable cells recalculate derived rows.</caption>
+            <thead>
+              <tr>
+                <th scope="col">Metric</th>
+                <th scope="col">Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="row-input">
+                <th scope="row">Start Weight</th>
+                <td><input type="number" class="cell-input" data-field="start" value="100" /></td>
+              </tr>
+              <tr class="row-input">
+                <th scope="row">Before</th>
+                <td><input type="number" class="cell-input" data-field="before" value="50" /></td>
+              </tr>
+              <tr class="row-spacer"></tr>
+              <tr class="row-input">
+                <th scope="row">After</th>
+                <td><input type="number" class="cell-input" data-field="after" value="75" /></td>
+              </tr>
+              <tr class="row-spacer"></tr>
+              <tr class="row-computed">
+                <th scope="row">Total Loaded</th>
+                <td class="cell-value computed" id="val-loaded"><span class="formula">(After − Before)</span> <span id="txt-loaded">25</span></td>
+              </tr>
+              <tr class="row-spacer"></tr>
+              <tr class="row-computed">
+                <th scope="row">Total Starting Weight</th>
+                <td class="cell-value computed" id="val-starting"><span class="formula">Start Weight + [After − Before]</span> <span id="txt-starting">125</span></td>
+              </tr>
+              <tr class="row-spacer"></tr>
+              <tr class="row-computed">
+                <th scope="row">End Weight</th>
+                <td class="cell-value computed" id="val-end">125</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="detail-notes">
+          <p><strong>How it works:</strong></p>
+          <ul>
+            <li><b>Total Loaded</b> = After − Before</li>
+            <li><b>Total Starting Weight</b> = Start Weight + [After − Before]</li>
+            <li><b>End Weight</b> equals the Total Starting Weight for the day.</li>
+          </ul>
+          <p class="note-hint">Tap any numbered cell to adjust the value; computed rows update automatically.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
