@@ -178,8 +178,7 @@ export interface RowIssue {
     | "unreadable"
     | "afterBelowBefore"
     | "startBelowEnd"
-    | "afterBelowEnd"
-    | "startBelowBefore";
+    ;
   /** Cells involved, so the form knows which inputs to highlight. */
   fields: WeightField[];
   /** Human-readable description shown next to the offending row. */
@@ -245,21 +244,9 @@ export function validateRow(row: ChemicalUsageRow): RowIssue[] {
     });
   }
 
-  if (after !== null && end !== null && after < end) {
-    issues.push({
-      code: "afterBelowEnd",
-      fields: ["after", "endWeight"],
-      message: "After must be greater than or equal to End Weight.",
-    });
-  }
+  
 
-  if (start !== null && before !== null && start < before) {
-    issues.push({
-      code: "startBelowBefore",
-      fields: ["startWeight", "before"],
-      message: "Start Weight must be greater than or equal to Before.",
-    });
-  }
+  
 
   return issues;
 }
