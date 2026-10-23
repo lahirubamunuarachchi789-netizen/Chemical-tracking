@@ -51,11 +51,15 @@ export async function fetchDailyRecords({
   injector,
   tank,
   chemical,
+  week,
+  year,
 }: {
   date: string; // YYYY-MM-DD in Sri Lanka time
   injector?: string;
   tank?: string;
   chemical?: string;
+  week?: number;
+  year?: number;
 }): Promise<DailyRecordsResult> {
   const supabase = createServerSupabaseClient();
 
@@ -84,11 +88,16 @@ export async function fetchDailyRecords({
 
   const records = (data ?? []) as DailyRecord[];
 
-  // Filter to records whose Sri Lanka local date matches the requested date
+  // Match the report's scoping: same Sri Lanka date, and the same year/week
+  // the user searched with, so the detail view never shows records the
+  // report itself excluded.
   const filtered = records.filter((record) => {
     try {
       const parts = getSLDateParts(record.CreatedAt);
-      return parts.isoDate === date;
+      if (parts.isoDate !== date) return false;
+      if (year && parts.year !== year) return false;
+      if (week && parts.week !== week) return false;
+      return true;
     } catch {
       return false;
     }

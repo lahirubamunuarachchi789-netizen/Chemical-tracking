@@ -16,7 +16,10 @@ import {
   fetchDailyRecords,
   type DailyRecord,
 } from '@/app/dashboard/consumption-reports/actions';
-import { type DailyUsage } from '@/lib/consumption-reports';
+import {
+  type ConsumptionFilters,
+  type DailyUsage,
+} from '@/lib/consumption-reports';
 
 /**
  * Consumption report view.
@@ -28,6 +31,8 @@ export function ConsumptionReportView() {
   const [results, setResults] = useState<DailyUsage[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
+  // Filters from the last search, reused when a daily card is opened.
+  const [activeFilters, setActiveFilters] = useState<ConsumptionFilters>({});
 
   // Day detail view state
   const [selectedDay, setSelectedDay] = useState<DailyUsage | null>(null);
@@ -50,11 +55,15 @@ export function ConsumptionReportView() {
       setLoadingDetail(true);
 
       try {
+        // Apply the filters the user searched with, so the dialog shows only
+        // the records behind this card (not every record for the date).
         const response = await fetchDailyRecords({
           date: day.date,
-          injector: undefined,
-          tank: undefined,
-          chemical: day.chemical || undefined,
+          injector: activeFilters.injector,
+          tank: activeFilters.tank,
+          chemical: activeFilters.chemical,
+          week: activeFilters.week,
+          year: activeFilters.year,
         });
         if (isStale()) {
           return;
@@ -74,7 +83,7 @@ export function ConsumptionReportView() {
         }
       }
     },
-    []
+    [activeFilters]
   );
 
   const closeDetail = useCallback(() => {
@@ -87,10 +96,11 @@ export function ConsumptionReportView() {
   }, []);
 
   const handleSearch = useCallback(
-    async (filters: Parameters<typeof fetchConsumptionReport>[0]) => {
+    async (filters: ConsumptionFilters) => {
       setSearching(true);
       setError(null);
       setResults(null);
+      setActiveFilters(filters);
       try {
         const response = await fetchConsumptionReport(filters);
         if (!response.success) {
