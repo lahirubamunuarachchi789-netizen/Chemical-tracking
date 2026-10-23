@@ -26,6 +26,8 @@ export interface DailyUsage {
   dayOfWeek: string;
   totalUsage: number;
   recordCount: number;
+  chemical?: string; // Chemical type, e.g. "BASF Midsole"
+  tank?: string; // Tank label, e.g. "Poly" or "ISO"
 }
 
 /** Convert a UTC timestamp from the database to a Sri Lanka local Date. */

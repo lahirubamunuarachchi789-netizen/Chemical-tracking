@@ -1,18 +1,39 @@
-'use client';
+﻿'use client';
 
 import { FlaskConical, Clock, Activity } from 'lucide-react';
 
 import { tierClasses, usageTier, type DailyUsage } from '@/lib/consumption-reports';
 
 /**
+ * Map tank codes to user-friendly labels.
+ *
+ * Type A tanks (A1, A2) are Poly tanks.
+ * Type B tanks (B1, B2) are ISO tanks.
+ */
+function tankLabel(code?: string): string {
+  if (!code) return '';
+  const type = code.charAt(0); // 'A' or 'B'
+  return type === 'A' ? 'Poly' : type === 'B' ? 'ISO' : code;
+}
+
+/**
+ * Build the chemical + tank display string, e.g. "BASF Midsole Poly".
+ */
+function chemicalTankDisplay(day: DailyUsage): string {
+  const parts = [day.chemical, tankLabel(day.tank)].filter(Boolean);
+  return parts.length ? parts.join(' ') : '';
+}
+
+/**
  * A single day's consumption card.
  *
  * Designed like a premium stationery card: the date header sits on a coloured
- * band whose intensity reflects usage volume (green → yellow → red), while the
+ * band whose intensity reflects usage volume (green -> yellow -> red), while the
  * total usage takes centre stage with a supporting micro-chart hint.
  */
 export function DailyUsageCard({ day }: { day: DailyUsage }) {
   const tier = usageTier(day.totalUsage);
+  const chemicalTank = chemicalTankDisplay(day);
 
   return (
     <article
@@ -63,7 +84,12 @@ export function DailyUsageCard({ day }: { day: DailyUsage }) {
                   : tier === 'medium'
                     ? 'Moderate consumption.'
                     : 'High consumption.'}
-          </p>
+            </p>
+            {chemicalTank && (
+              <p className="text-[10px] font-semibold tracking-wide text-navy-500 uppercase mt-1">
+                {chemicalTank}
+              </p>
+            )}
           </div>
           <Activity className="h-5 w-5 shrink-0 text-navy-300" aria-hidden="true" />
         </div>

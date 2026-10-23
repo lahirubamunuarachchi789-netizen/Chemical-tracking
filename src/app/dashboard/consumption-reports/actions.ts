@@ -78,7 +78,7 @@ export async function fetchConsumptionReport(filters: {
   // Group by SL date and calculate total usage
   const byDate = new Map<
     string,
-    { totalUsage: number; count: number; parts: SLDateParts }
+    { totalUsage: number; count: number; parts: SLDateParts; chemical?: string; tank?: string }
   >();
 
   for (const record of filtered) {
@@ -91,6 +91,13 @@ export async function fetchConsumptionReport(filters: {
     };
     existing.totalUsage += usage;
     existing.count += 1;
+    // Capture chemical and tank from the first record that has them
+    if (!existing.chemical && record.Chemical) {
+      existing.chemical = record.Chemical;
+    }
+    if (!existing.tank && record.LineCode) {
+      existing.tank = record.LineCode;
+    }
     byDate.set(parts.isoDate, existing);
   }
 
@@ -101,6 +108,8 @@ export async function fetchConsumptionReport(filters: {
       dayOfWeek: data.parts.dayOfWeek,
       totalUsage: Math.round(data.totalUsage * 100) / 100,
       recordCount: data.count,
+      chemical: data.chemical,
+      tank: data.tank,
     }))
     .sort((a, b) => a.date.localeCompare(b.date));
 
