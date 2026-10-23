@@ -43,7 +43,7 @@ export function ConsumptionReportView() {
   const totalUsage = results
     ? results.reduce((sum, day) => sum + day.totalUsage, 0)
     : 0;
-  const peakDay = results
+  const peakDay = results && results.length > 0
     ? results.reduce((peak, day) =>
         day.totalUsage > peak.totalUsage ? day : peak
       )
