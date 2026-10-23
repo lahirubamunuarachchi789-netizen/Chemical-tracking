@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { FlaskConical, Clock, Activity } from 'lucide-react';
+import { FlaskConical, Clock, Activity, ChevronRight } from 'lucide-react';
 
 import { tierClasses, usageTier, type DailyUsage } from '@/lib/consumption-reports';
 
@@ -30,17 +30,27 @@ function chemicalTankDisplay(day: DailyUsage): string {
  * Designed like a premium stationery card: the date header sits on a coloured
  * band whose intensity reflects usage volume (green -> yellow -> red), while the
  * total usage takes centre stage with a supporting micro-chart hint.
+ *
+ * Cards are clickable – pass an onClick handler to open a detail view.
  */
-export function DailyUsageCard({ day }: { day: DailyUsage }) {
+export function DailyUsageCard({
+  day,
+  onClick,
+}: { day: DailyUsage; onClick?: () => void }) {
   const tier = usageTier(day.totalUsage);
   const chemicalTank = chemicalTankDisplay(day);
 
   return (
     <article
       className={[
-        'flex flex-col rounded-2xl border border-navy-100 bg-white shadow-sm transition hover:shadow-md',
+        'flex flex-col rounded-2xl border border-navy-100 bg-white shadow-sm transition hover:shadow-md cursor-pointer',
+        onClick ? 'hover:border-sheet-600 active:scale-[0.98]' : '',
         tier === 'none' ? 'opacity-60' : '',
       ].join(' ')}
+      onClick={onClick}
+      role="button"
+      tabIndex={onClick ? 0 : undefined}
+      aria-label={onClick ? `View details for ${day.formattedDate}` : undefined}
     >
       <div
         className={[
@@ -92,6 +102,9 @@ export function DailyUsageCard({ day }: { day: DailyUsage }) {
             )}
           </div>
           <Activity className="h-5 w-5 shrink-0 text-navy-300" aria-hidden="true" />
+          {onClick && (
+            <ChevronRight className="h-4 w-4 shrink-0 text-navy-300" aria-hidden="true" />
+          )}
         </div>
       </div>
     </article>

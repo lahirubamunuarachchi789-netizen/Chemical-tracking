@@ -25,6 +25,78 @@ export interface ConsumptionReportResult {
   data?: DailyUsage[];
 }
 
+export interface DailyRecord {
+  RangeCode: string;
+  LineCode: string;
+  Chemical: string | null;
+  StartWeight: number | null;
+  BeforeWeight: number | null;
+  AfterWeight: number | null;
+  EndWeight: number | null;
+  CreatedAt: string;
+}
+
+export interface DailyRecordsResult {
+  success: boolean;
+  error?: string;
+  data?: DailyRecord[];
+}
+
+/**
+ * Fetch individual ChemicalLoadingRecords for a specific Sri Lanka date.
+ * Used to populate the day-detail view when a daily card is clicked.
+ */
+export async function fetchDailyRecords({
+  date,
+  injector,
+  tank,
+  chemical,
+}: {
+  date: string; // YYYY-MM-DD in Sri Lanka time
+  injector?: string;
+  tank?: string;
+  chemical?: string;
+}): Promise<DailyRecordsResult> {
+  const supabase = createServerSupabaseClient();
+
+  let query = supabase
+    .from('ChemicalLoadingRecords')
+    .select(
+      'RangeCode, LineCode, Chemical, StartWeight, BeforeWeight, AfterWeight, EndWeight, CreatedAt'
+    )
+    .order('CreatedAt', { ascending: true });
+
+  if (injector) {
+    query = query.eq('RangeCode', injector);
+  }
+  if (tank) {
+    query = query.eq('LineCode', tank);
+  }
+  if (chemical) {
+    query = query.eq('Chemical', chemical);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  const records = (data ?? []) as DailyRecord[];
+
+  // Filter to records whose Sri Lanka local date matches the requested date
+  const filtered = records.filter((record) => {
+    try {
+      const parts = getSLDateParts(record.CreatedAt);
+      return parts.isoDate === date;
+    } catch {
+      return false;
+    }
+  });
+
+  return { success: true, data: filtered };
+}
+
 /**
  * Fetch consumption report data from ChemicalLoadingRecords.
  *

@@ -1,11 +1,21 @@
 'use client';
 
-import { useCallback, useState } from 'react';
-import { BarChart3, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
+import { useCallback, useRef, useState } from 'react';
+import {
+  BarChart3,
+  AlertCircle,
+  CheckCircle2,
+  RefreshCw,
+  X,
+} from 'lucide-react';
 
 import { ConsumptionReportFilters } from './consumption-report-filters';
 import { DailyUsageCard } from './daily-usage-card';
-import { fetchConsumptionReport } from '@/app/dashboard/consumption-reports/actions';
+import {
+  fetchConsumptionReport,
+  fetchDailyRecords,
+  type DailyRecord,
+} from '@/app/dashboard/consumption-reports/actions';
 import { type DailyUsage } from '@/lib/consumption-reports';
 
 /**
@@ -18,6 +28,63 @@ export function ConsumptionReportView() {
   const [results, setResults] = useState<DailyUsage[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
+
+  // Day detail view state
+  const [selectedDay, setSelectedDay] = useState<DailyUsage | null>(null);
+  const [detailRecords, setDetailRecords] = useState<DailyRecord[] | null>(
+    null
+  );
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const detailRequestRef = useRef(0);
+
+  const handleCardClick = useCallback(
+    async (day: DailyUsage) => {
+      // Ignore the response if the dialog is closed while it is loading.
+      const requestId = ++detailRequestRef.current;
+      const isStale = () => requestId !== detailRequestRef.current;
+
+      setSelectedDay(day);
+      setDetailRecords(null);
+      setDetailError(null);
+      setLoadingDetail(true);
+
+      try {
+        const response = await fetchDailyRecords({
+          date: day.date,
+          injector: undefined,
+          tank: undefined,
+          chemical: day.chemical || undefined,
+        });
+        if (isStale()) {
+          return;
+        }
+        if (!response.success) {
+          setDetailError(response.error || 'Failed to load day details.');
+          return;
+        }
+        setDetailRecords(response.data ?? []);
+      } catch {
+        if (!isStale()) {
+          setDetailError('An unexpected error occurred while loading details.');
+        }
+      } finally {
+        if (!isStale()) {
+          setLoadingDetail(false);
+        }
+      }
+    },
+    []
+  );
+
+  const closeDetail = useCallback(() => {
+    setSelectedDay(null);
+    setDetailRecords(null);
+    setDetailError(null);
+    setLoadingDetail(false);
+    // Invalidate any in-flight detail request so its result is discarded.
+    detailRequestRef.current += 1;
+  }, []);
 
   const handleSearch = useCallback(
     async (filters: Parameters<typeof fetchConsumptionReport>[0]) => {
@@ -96,6 +163,17 @@ export function ConsumptionReportView() {
         </div>
       )}
 
+      {/* -------------------------------------------------- Day detail dialog */}
+      {selectedDay && (
+        <DayDetailDialog
+          day={selectedDay}
+          records={detailRecords ?? []}
+          loading={loadingDetail}
+          error={detailError}
+          onClose={closeDetail}
+        />
+      )}
+
       {/* -------------------------------------------------- Empty state */}
       {hasSearched && !error && results.length === 0 && (
         <section className="rounded-2xl border border-dashed border-navy-200 bg-navy-50/60 px-8 py-12 text-center">
@@ -132,7 +210,11 @@ export function ConsumptionReportView() {
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {results.map((day) => (
-              <DailyUsageCard key={day.date} day={day} />
+              <DailyUsageCard
+                key={day.date}
+                day={day}
+                onClick={() => handleCardClick(day)}
+              />
             ))}
           </div>
         </section>
@@ -201,5 +283,193 @@ function ActivityIcon() {
     >
       <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
     </svg>
+  );
+}
+
+/** Weight value with a fixed 2-decimal readout; "â€”" when the cell is empty. */
+function formatWeight(value: number | null): string {
+  return value === null || value === undefined ? 'â€”' : value.toFixed(2);
+}
+
+/**
+ * Day detail dialog.
+ *
+ * Opened by clicking a Daily consumption card. Lists the individual
+ * ChemicalLoadingRecords recorded for that Sri Lanka date, with the derived
+ * loaded / consumption figures for each entry.
+ */
+function DayDetailDialog({
+  day,
+  records,
+  loading,
+  error,
+  onClose,
+}: {
+  day: DailyUsage;
+  records: DailyRecord[];
+  loading: boolean;
+  error: string | null;
+  onClose: () => void;
+}) {
+  const details = records.map((record) => {
+    const before = record.BeforeWeight ?? 0;
+    const after = record.AfterWeight ?? 0;
+    const loaded = after - before;
+    const start = record.StartWeight ?? 0;
+    const consumption =
+      typeof record.EndWeight === 'number'
+        ? start + loaded - record.EndWeight
+        : start + loaded;
+
+    return { record, loaded, consumption };
+  });
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-navy-900/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="day-detail-title"
+      onClick={onClose}
+    >
+      <div
+        className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        {/* -------------------------------------------------- Header */}
+        <div className="flex items-start justify-between gap-3 border-b border-navy-100 bg-navy-50/60 px-4 py-3 sm:px-6">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold tracking-wider text-navy-500 uppercase">
+              Daily report â€” detail view
+            </p>
+            <h3
+              id="day-detail-title"
+              className="truncate text-base font-semibold text-navy-900 sm:text-lg"
+            >
+              {day.formattedDate}
+            </h3>
+            <p className="mt-0.5 text-xs text-navy-500">
+              {day.recordCount} record{day.recordCount === 1 ? '' : 's'} Â·{' '}
+              {day.totalUsage.toFixed(2)} kg total usage
+              {day.chemical ? ` Â· ${day.chemical}` : ''}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 rounded-lg border border-navy-100 bg-white p-1.5 text-navy-500 transition hover:bg-navy-50 hover:text-navy-900"
+            aria-label="Close day details"
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+
+        {/* -------------------------------------------------- Body */}
+        <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
+          {loading && (
+            <div className="flex h-40 flex-col items-center justify-center gap-3">
+              <RefreshCw
+                className="h-5 w-5 animate-spin text-navy-500"
+                aria-hidden="true"
+              />
+              <p className="text-sm text-navy-500">Loading recordsâ€¦</p>
+            </div>
+          )}
+
+          {!loading && error && (
+            <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <AlertCircle
+                className="mt-0.5 h-4 w-4 shrink-0 text-red-600"
+                aria-hidden="true"
+              />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {!loading && !error && details.length === 0 && (
+            <div className="rounded-xl border border-dashed border-navy-200 bg-navy-50/60 px-4 py-8 text-center">
+              <p className="text-sm font-semibold text-navy-900">
+                No records found
+              </p>
+              <p className="mt-1 text-sm text-navy-500">
+                No individual entries were recorded for this day.
+              </p>
+            </div>
+          )}
+
+          {!loading && !error && details.length > 0 && (
+            <div className="overflow-x-auto rounded-xl border border-navy-100">
+              <table className="w-full border-collapse text-left text-sm">
+                <thead>
+                  <tr className="bg-navy-50/60 text-[11px] tracking-wider text-navy-500 uppercase">
+                    <th scope="col" className="px-3 py-2 font-semibold">
+                      Line / Range
+                    </th>
+                    <th scope="col" className="px-3 py-2 font-semibold">
+                      Start
+                    </th>
+                    <th scope="col" className="px-3 py-2 font-semibold">
+                      Before
+                    </th>
+                    <th scope="col" className="px-3 py-2 font-semibold">
+                      After
+                    </th>
+                    <th scope="col" className="px-3 py-2 font-semibold">
+                      Loaded
+                    </th>
+                    <th scope="col" className="px-3 py-2 font-semibold">
+                      Usage
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {details.map(({ record, loaded, consumption }, index) => (
+                    <tr
+                      key={`${record.CreatedAt}-${index}`}
+                      className="border-t border-navy-100 text-navy-800"
+                    >
+                      <td className="px-3 py-2">
+                        <span className="font-medium">
+                          {record.LineCode || 'â€”'}
+                        </span>
+                        <span className="block text-xs text-navy-500">
+                          {record.RangeCode || 'â€”'}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 tabular-nums">
+                        {formatWeight(record.StartWeight)}
+                      </td>
+                      <td className="px-3 py-2 tabular-nums">
+                        {formatWeight(record.BeforeWeight)}
+                      </td>
+                      <td className="px-3 py-2 tabular-nums">
+                        {formatWeight(record.AfterWeight)}
+                      </td>
+                      <td className="px-3 py-2 tabular-nums">
+                        {formatWeight(loaded)}
+                      </td>
+                      <td className="px-3 py-2 font-semibold text-navy-900 tabular-nums">
+                        {formatWeight(consumption)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* -------------------------------------------------- Footer */}
+        <div className="border-t border-navy-100 px-4 py-3 text-right sm:px-6">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-navy-100 bg-white px-4 py-2 text-sm font-medium text-navy-700 transition hover:bg-navy-50"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -81,15 +81,6 @@ const weekNum = Math.ceil((daysSinceJan1 + 1) / 7);
   };
 }
 
-/** ISO week number for a local calendar date. */
-function getISOWeek(date: Date): number {
-  const copy = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayOfYear = Math.floor(
-    (copy.getTime() - new Date(Date.UTC(copy.getFullYear(), 0, 0)).getTime()) / 86400000
-  );
-  return Math.ceil((dayOfYear + 1) / 7);
-}
-
 /** Filter options for the consumption report. */
 export const CONSUMPTION_FILTERS = {
   injectors: ['RGE 01', 'RGE 02'],
