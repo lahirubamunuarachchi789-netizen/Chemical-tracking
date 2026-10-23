@@ -53,13 +53,20 @@ export function getSLDateParts(timestamp: string | Date): SLDateParts {
   const dayOfWeek = get('weekday');
 
   const isoDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-  const week = getISOWeek(new Date(year, month - 1, day));
+// Use a robust ISO week calculation that handles timezone edge cases.
+// October 19, 2026 should be in week 43, not week 42.
+const slDate = new Date(Date.UTC(year, month - 1, day));
+const thursday = new Date(slDate.getTime() + 86400000 * (4 - (slDate.getDay() || 7)));
+const startYear = thursday.getFullYear();
+const jan1 = new Date(startYear, 0, 1);
+const daysSinceJan1 = Math.floor((thursday.getTime() - jan1.getTime()) / 86400000);
+const weekNum = Math.ceil((daysSinceJan1 + 1) / 7);
 
   return {
     year,
     month,
     day,
-    week,
+    week: weekNum,
     dayOfWeek,
     formattedDate: new Intl.DateTimeFormat('en-LK', {
       timeZone: SRI_LANKA_TZ,
