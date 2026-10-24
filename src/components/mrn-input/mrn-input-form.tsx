@@ -7,7 +7,7 @@ import {
   SelectField,
   TextField,
 } from "@/components/chemical-usage/form-controls";
-import { chemicals } from "@/lib/chemical-usage";
+import { NO_CHEMICAL, chemicals } from "@/lib/chemical-usage";
 import { CONSUMPTION_FILTERS } from "@/lib/consumption-reports";
 import {
   saveMrnRecords,
@@ -29,11 +29,6 @@ function createEmptyRows(): MrnRow[] {
     poly: "",
     iso: "",
   }));
-}
-
-/** Round to 3 decimals, matching the numeric(18,3) columns. */
-function round3(value: number): number {
-  return Math.round(value * 1000) / 1000;
 }
 
 /**
@@ -117,6 +112,9 @@ export function MrnInputForm({ createdBy }: { createdBy: string | null }) {
       // Skip sets that were left completely empty.
       if (!hasChemical && !hasPoly && !hasIso) continue;
 
+      // A "No Chemical" set is valid on its own, with zero weights.
+      const noChemicalRow = row.chemical === NO_CHEMICAL;
+
       const polyWeight = hasPoly ? parseFloat(row.poly) : null;
       const isoWeight = hasIso ? parseFloat(row.iso) : null;
 
@@ -131,10 +129,10 @@ export function MrnInputForm({ createdBy }: { createdBy: string | null }) {
 
       inputs.push({
         setIndex: index + 1,
-        week: weekNumber,
         chemical: hasChemical ? row.chemical : null,
-        polyWeight: polyWeight === null ? null : round3(polyWeight),
-        isoWeight: isoWeight === null ? null : round3(isoWeight),
+        // "No Chemical" stores 0 in both weight columns.
+        polyWeight: noChemicalRow ? 0 : polyWeight ?? 0,
+        isoWeight: noChemicalRow ? 0 : isoWeight ?? 0,
       });
     }
 
@@ -146,7 +144,7 @@ export function MrnInputForm({ createdBy }: { createdBy: string | null }) {
     setSubmitting(true);
 
     try {
-      const result = await saveMrnRecords(batchId, inputs, createdBy);
+      const result = await saveMrnRecords(batchId, weekNumber, inputs, createdBy);
 
       if (!result.success) {
         setSaveError(result.error || "Failed to save to Supabase.");
@@ -226,6 +224,8 @@ export function MrnInputForm({ createdBy }: { createdBy: string | null }) {
       <ol className="divide-y divide-navy-100">
         {rows.map((row, index) => {
           const setNumber = index + 1;
+          // "No Chemical" means nothing was loaded: Poly and ISO are 0.
+          const noChemical = row.chemical === NO_CHEMICAL;
 
           return (
             <li
@@ -242,28 +242,37 @@ export function MrnInputForm({ createdBy }: { createdBy: string | null }) {
                 label="Chemical"
                 className="sm:[&>label]:sr-only"
                 value={row.chemical}
-                onChange={(value) => updateRow(index, { chemical: value })}
+                onChange={(value) =>
+                  updateRow(
+                    index,
+                    value === NO_CHEMICAL
+                      ? { chemical: value, poly: "0", iso: "0" }
+                      : { chemical: value }
+                  )
+                }
                 options={chemicals}
               />
 
               <TextField
                 label="Poly"
                 className="sm:[&>label]:sr-only"
-                value={row.poly}
+                value={noChemical ? "0" : row.poly}
                 onChange={(value) => updateRow(index, { poly: value })}
                 placeholder="0.000"
                 inputMode="decimal"
                 suffix="kg"
+                disabled={noChemical}
               />
 
               <TextField
                 label="ISO"
                 className="sm:[&>label]:sr-only"
-                value={row.iso}
+                value={noChemical ? "0" : row.iso}
                 onChange={(value) => updateRow(index, { iso: value })}
                 placeholder="0.000"
                 inputMode="decimal"
                 suffix="kg"
+                disabled={noChemical}
               />
             </li>
           );

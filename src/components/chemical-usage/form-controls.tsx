@@ -22,6 +22,7 @@ export function TextField({
   type = "text",
   inputMode,
   suffix,
+  disabled = false,
   className = "",
 }: {
   label: string;
@@ -31,6 +32,7 @@ export function TextField({
   type?: "text" | "date";
   inputMode?: "text" | "decimal" | "numeric";
   suffix?: string;
+  disabled?: boolean;
   className?: string;
 }) {
   return (
@@ -46,6 +48,7 @@ export function TextField({
           value={value}
           placeholder={placeholder}
           onChange={(event) => onChange(event.target.value)}
+          disabled={disabled}
           className={`${baseControl} ${suffix ? "pr-12" : ""}`}
         />
         {suffix ? (
