@@ -3,8 +3,12 @@
 import { useMemo, useState } from "react";
 import { AlertCircle, CheckCircle2, RotateCcw, Send } from "lucide-react";
 
-import { SelectField, TextField } from "@/components/chemical-usage/form-controls";
+import {
+  SelectField,
+  TextField,
+} from "@/components/chemical-usage/form-controls";
 import { chemicals } from "@/lib/chemical-usage";
+import { CONSUMPTION_FILTERS } from "@/lib/consumption-reports";
 import {
   saveMrnRecords,
   type MrnRecordInput,
@@ -41,6 +45,7 @@ function round3(value: number): number {
  * as one batch.
  */
 export function MrnInputForm({ createdBy }: { createdBy: string | null }) {
+  const [week, setWeek] = useState("");
   const [rows, setRows] = useState<MrnRow[]>(createEmptyRows);
   const [submitting, setSubmitting] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -60,6 +65,7 @@ export function MrnInputForm({ createdBy }: { createdBy: string | null }) {
   }
 
   function resetForm() {
+    setWeek("");
     setRows(createEmptyRows());
     setSaveError(null);
     setSaveSuccess(false);
@@ -93,6 +99,13 @@ export function MrnInputForm({ createdBy }: { createdBy: string | null }) {
     setSaveError(null);
     setSaveSuccess(false);
 
+    // The week applies to every set in the sheet, so it is resolved first.
+    if (!week) {
+      setSaveError("Select the week this MRN sheet belongs to.");
+      return;
+    }
+
+    const weekNumber = parseInt(week, 10);
     const inputs: MrnRecordInput[] = [];
 
     for (let index = 0; index < rows.length; index += 1) {
@@ -118,6 +131,7 @@ export function MrnInputForm({ createdBy }: { createdBy: string | null }) {
 
       inputs.push({
         setIndex: index + 1,
+        week: weekNumber,
         chemical: hasChemical ? row.chemical : null,
         polyWeight: polyWeight === null ? null : round3(polyWeight),
         isoWeight: isoWeight === null ? null : round3(isoWeight),
@@ -141,6 +155,7 @@ export function MrnInputForm({ createdBy }: { createdBy: string | null }) {
 
       setSaveSuccess(true);
       setSavedRowsCount(result.inserted ?? 0);
+      setWeek("");
       setRows(createEmptyRows());
     } catch (err) {
       setSaveError(
@@ -170,9 +185,33 @@ export function MrnInputForm({ createdBy }: { createdBy: string | null }) {
           </p>
         </div>
 
-        <span className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold tracking-wide uppercase">
-          {summary.filled} of {SET_COUNT} filled
-        </span>
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold tracking-wider text-sheet-100 uppercase">
+              Week
+            </span>
+            <select
+              value={week}
+              onChange={(event) => {
+                setWeek(event.target.value);
+                setSaveSuccess(false);
+              }}
+              aria-label="Week"
+              className="min-w-[7rem] rounded-lg border-white/30 bg-white px-3 py-2 text-sm font-medium text-navy-900 shadow-sm focus:border-white focus:outline-none focus:ring-2 focus:ring-white/60"
+            >
+              <option value="">Select week</option>
+              {CONSUMPTION_FILTERS.weeks.map((value) => (
+                <option key={value} value={value}>
+                  Week {value}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <span className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold tracking-wide uppercase">
+            {summary.filled} of {SET_COUNT} filled
+          </span>
+        </div>
       </div>
 
       {/* -------------------------------------------------- Header row */}

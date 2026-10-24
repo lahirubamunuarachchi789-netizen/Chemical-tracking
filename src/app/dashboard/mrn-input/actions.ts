@@ -11,6 +11,8 @@ import { verifySessionToken } from "@/lib/auth/session";
 export interface MrnRecordInput {
   /** 1-based position of the set in the sheet (1..10). */
   setIndex: number;
+  /** Week the sheet belongs to, 1-53. */
+  week: number;
   /** Chemical name from the dropdown, or null when the row was left empty. */
   chemical: string | null;
   polyWeight: number | null;
@@ -55,6 +57,7 @@ export async function saveMrnRecords(
   const rows = inputs.map((input) => ({
     BatchID: batchId,
     SetIndex: input.setIndex,
+    Week: input.week,
     Chemical: input.chemical,
     PolyWeight: input.polyWeight,
     IsoWeight: input.isoWeight,
