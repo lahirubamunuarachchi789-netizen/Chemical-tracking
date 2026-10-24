@@ -141,25 +141,38 @@ export function tierClasses(tier: ReturnType<typeof usageTier>): string {
 }
 
 /**
- * One chemical's line in the Weekly Report.
+ * Weekly report: one chemical, with the Poly and ISO figures side by side.
  *
- * `poly` and `totalUsage` come from two different tables but describe the same
- * week, so they can be compared: balance = poly - totalUsage.
+ * Poly and ISO are tracked separately because they are different materials
+ * held in different tanks: Poly from type-A tanks (A1, A2), ISO from type-B
+ * tanks (B1, B2). MRNRecords records both weights per set; the loading records
+ * carry only the tank, so usage is split by the tank's type.
  */
-export interface WeeklyChemicalUsage {
-  chemical: string;
-  /** Poly quantity recorded in MRNRecords for this week and year. */
-  poly: number;
+
+/** The two material kinds the weekly report compares. */
+export type MaterialKind = 'poly' | 'iso';
+
+/** One material's figures for a chemical in one week. */
+export interface WeeklyMaterialUsage {
+  /** Quantity recorded in MRNRecords for this week and year. */
+  mrn: number;
   /** Total usage from ChemicalLoadingRecords for the same week and year. */
   totalUsage: number;
-  /** poly − totalUsage. Negative means more consumed than recorded. */
+  /** mrn − totalUsage. Negative means more consumed than recorded. */
   balance: number;
-  /** Number of MRN sets contributing to `poly`. */
+  /** Number of MRN sets contributing to `mrn`. */
   mrnSetCount: number;
-  /** Number of loading records contributing to `totalUsage`. */
+ /** Number of loading records contributing to `totalUsage`. */
   recordCount: number;
-  /** True when the chemical has usage but no MRN entry, or the reverse. */
+  /** True when this material is present in only one of the two sources. */
   hasMismatch: boolean;
+}
+
+/** One chemical's line in the Weekly Report. */
+export interface WeeklyChemicalUsage {
+  chemical: string;
+  poly: WeeklyMaterialUsage;
+  iso: WeeklyMaterialUsage;
 }
 
 /** Result of the weekly report query. */
@@ -170,69 +183,119 @@ export interface WeeklyReportResult {
   weekStart: string;
   weekEnd: string;
   chemicals: WeeklyChemicalUsage[];
-  totals: {
-    poly: number;
-    totalUsage: number;
-    balance: number;
+  totals: Record<MaterialKind, WeeklyMaterialUsage> & {
     chemicalCount: number;
   };
 }
 
+/** An empty material bucket. */
+export function emptyMaterialUsage(): WeeklyMaterialUsage {
+  return {
+    mrn: 0,
+    totalUsage: 0,
+    balance: 0,
+    mrnSetCount: 0,
+    recordCount: 0,
+    hasMismatch: false,
+  };
+}
+
 /**
- * Accumulate per-chemical weekly figures.
+ * Map a tank code to the material it holds.
  *
- * Kept pure and separate from the Supabase call so the arithmetic can be
- * unit-tested and so both tables are merged by one rule: every chemical that
- * appears in EITHER source must appear in the report, with a zero default for
- * the side that has nothing.
+ * Type A tanks (A1, A2) hold Poly; type B tanks (B1, B2) hold ISO. This mirrors
+ * `tankLabel` in the Daily card, so both reports classify a tank identically.
+ * Returns null for an unrecognised code, which keeps it out of both columns
+ * rather than silently mis-attributing its usage.
+ */
+export function materialFromTank(tank: string | null | undefined): MaterialKind | null {
+  const code = tank?.trim().charAt(0).toUpperCase();
+  if (code === 'A') return 'poly';
+  if (code === 'B') return 'iso';
+  return null;
+}
+
+/** Per-material accumulators used while scanning the two tables. */
+export interface MaterialAccumulator {
+  mrn: Map<string, number>;
+  usage: Map<string, number>;
+  mrnSets: Map<string, number>;
+  records: Map<string, number>;
+}
+
+export function createAccumulator(): MaterialAccumulator {
+  return {
+    mrn: new Map(),
+    usage: new Map(),
+    mrnSets: new Map(),
+    records: new Map(),
+  };
+}
+
+function toMaterialUsage(acc: MaterialAccumulator, chemical: string): WeeklyMaterialUsage {
+  const mrn = acc.mrn.get(chemical) ?? 0;
+  const totalUsage = acc.usage.get(chemical) ?? 0;
+  const mrnSetCount = acc.mrnSets.get(chemical) ?? 0;
+  const recordCount = acc.records.get(chemical) ?? 0;
+
+  return {
+    mrn,
+    totalUsage,
+    balance: mrn - totalUsage,
+    mrnSetCount,
+    recordCount,
+    // Present in only one source: either nothing was loaded against recorded
+    // MRN quantity, or usage happened with nothing recorded in the MRN.
+    hasMismatch: mrnSetCount === 0 || recordCount === 0,
+  };
+}
+
+/**
+ * Combine both materials into the per-chemical weekly rows.
  *
- * @param polyByChemical Poly quantity per chemical, from MRNRecords.
- * @param usageByChemical Total usage per chemical, from ChemicalLoadingRecords.
- * @param mrnSetsByChemical Number of MRN sets per chemical.
- * @param recordsByChemical Number of loading records per chemical.
+ * Kept pure so the arithmetic is unit-testable. A chemical is listed if it
+ * appears in EITHER material's MRN records or loading records, so nothing is
+ * hidden when only one side has data.
  */
 export function buildWeeklyReport(
-  polyByChemical: Map<string, number>,
-  usageByChemical: Map<string, number>,
-  mrnSetsByChemical: Map<string, number>,
-  recordsByChemical: Map<string, number>
+  poly: MaterialAccumulator,
+  iso: MaterialAccumulator
 ): Omit<WeeklyReportResult, 'year' | 'week' | 'weekStart' | 'weekEnd'> {
-  // Union, so a chemical is listed if it has MRN poly, usage, or both.
   const names = new Set<string>([
-    ...polyByChemical.keys(),
-    ...usageByChemical.keys(),
+    ...poly.mrn.keys(),
+    ...poly.usage.keys(),
+    ...iso.mrn.keys(),
+    ...iso.usage.keys(),
   ]);
 
   const chemicals: WeeklyChemicalUsage[] = [...names]
-    .map((chemical) => {
-      const poly = polyByChemical.get(chemical) ?? 0;
-      const totalUsage = usageByChemical.get(chemical) ?? 0;
-      const mrnSetCount = mrnSetsByChemical.get(chemical) ?? 0;
-      const recordCount = recordsByChemical.get(chemical) ?? 0;
-
-      return {
-        chemical,
-        poly,
-        totalUsage,
-        balance: poly - totalUsage,
-        mrnSetCount,
-        recordCount,
-        // A chemical in only one of the two tables is worth flagging: either
-        // nothing was loaded against recorded poly, or usage happened with no
-        // Poly recorded at all.
-        hasMismatch: mrnSetCount === 0 || recordCount === 0,
-      };
-    })
+    .map((chemical) => ({
+      chemical,
+      poly: toMaterialUsage(poly, chemical),
+      iso: toMaterialUsage(iso, chemical),
+    }))
     .sort((a, b) => a.chemical.localeCompare(b.chemical));
 
   const totals = chemicals.reduce(
-    (acc, row) => ({
-      poly: acc.poly + row.poly,
-      totalUsage: acc.totalUsage + row.totalUsage,
-      balance: acc.balance + row.balance,
-      chemicalCount: acc.chemicalCount + 1,
-    }),
-    { poly: 0, totalUsage: 0, balance: 0, chemicalCount: 0 }
+    (acc, row) => {
+      for (const kind of ['poly', 'iso'] as const) {
+        acc[kind] = {
+          mrn: acc[kind].mrn + row[kind].mrn,
+          totalUsage: acc[kind].totalUsage + row[kind].totalUsage,
+          balance: acc[kind].balance + row[kind].balance,
+          mrnSetCount: acc[kind].mrnSetCount + row[kind].mrnSetCount,
+          recordCount: acc[kind].recordCount + row[kind].recordCount,
+          hasMismatch: acc[kind].hasMismatch || row[kind].hasMismatch,
+        };
+      }
+      acc.chemicalCount += 1;
+      return acc;
+    },
+    {
+      poly: emptyMaterialUsage(),
+      iso: emptyMaterialUsage(),
+      chemicalCount: 0,
+    } as Record<MaterialKind, WeeklyMaterialUsage> & { chemicalCount: number }
   );
 
   return { chemicals, totals };

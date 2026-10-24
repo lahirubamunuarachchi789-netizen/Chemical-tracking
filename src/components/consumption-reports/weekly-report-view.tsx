@@ -4,14 +4,17 @@ import { useCallback, useState } from 'react';
 import {
   AlertCircle,
   CalendarRange,
-  CheckCircle2,
   RefreshCw,
-  Scale,
   Search,
 } from 'lucide-react';
 
 import { SelectField } from '@/components/chemical-usage/form-controls';
-import { CONSUMPTION_FILTERS, type WeeklyReportResult } from '@/lib/consumption-reports';
+import {
+  CONSUMPTION_FILTERS,
+  type MaterialKind,
+  type WeeklyMaterialUsage,
+  type WeeklyReportResult,
+} from '@/lib/consumption-reports';
 import { fetchWeeklyReport } from '@/app/dashboard/consumption-reports/weekly-actions';
 
 /** Formats a weight with 2 decimals and thousands separators. */
@@ -29,15 +32,33 @@ function balanceClasses(balance: number): string {
   return 'text-navy-600';
 }
 
+/** Colour hint for a material group, so Poly and ISO read apart at a glance. */
+const GROUP_STYLES: Record<MaterialKind, { head: string; cell: string }> = {
+  poly: {
+    head: 'bg-sheet-600 text-white',
+    cell: 'bg-sheet-50/40',
+  },
+  iso: {
+    head: 'bg-navy-700 text-white',
+    cell: 'bg-navy-50/40',
+  },
+};
+
+const MATERIAL_LABELS: Record<MaterialKind, string> = {
+  poly: 'Poly',
+  iso: 'ISO',
+};
+
 /**
  * Weekly Report.
  *
- * Pick a week and a year, then compare the Poly recorded in MRNRecords with
- * the total usage recorded in ChemicalLoadingRecords for that same week, per
- * chemical. Balance = Poly − total usage.
+ * Pick a week and a year, then compare — for every chemical — the Poly and ISO
+ * quantities recorded in MRNRecords with the usage recorded in
+ * ChemicalLoadingRecords for that same week. Balance = MRN − total usage.
  *
- * Total usage comes from the shared `calculateRecordUsage` helper, so the
- * figure matches the Daily report exactly.
+ * Volume usage is split by tank type (A tanks hold Poly, B tanks hold ISO) and
+ * uses the shared `calculateRecordUsage` helper, so the figures match the
+ * Daily report exactly.
  */
 export function WeeklyReportView() {
   const currentYear = new Date().getFullYear();
@@ -190,7 +211,7 @@ export function WeeklyReportView() {
           <div className="flex flex-wrap items-end justify-between gap-2 border-b border-navy-100 pb-3">
             <div>
               <h2 className="text-sm font-semibold tracking-wider text-navy-900 uppercase">
-                Weekly balance
+                Weekly Poly and ISO balance
               </h2>
               <p className="mt-0.5 text-xs text-navy-500">
                 Week {result.week}, {result.year} · {result.weekStart} to{' '}
@@ -200,58 +221,93 @@ export function WeeklyReportView() {
             </div>
           </div>
 
-          {/* Stats strip */}
-          <div className="grid gap-3 sm:grid-cols-3">
-            <StatCard
-              label="Total Poly (MRN)"
-              value={kg(result.totals.poly)}
-              unit="kg"
-              icon={CalendarRange}
-              accent="border-sheet-600 bg-sheet-50 text-sheet-600"
-            />
-            <StatCard
-              label="Total usage (loadings)"
-              value={kg(result.totals.totalUsage)}
-              unit="kg"
-              icon={CheckCircle2}
-              accent="border-emerald-200 bg-emerald-50 text-emerald-700"
-            />
-            <StatCard
-              label="Total balance"
-              value={kg(result.totals.balance)}
-              unit="kg"
-              icon={Scale}
-              accent={
-                result.totals.balance < 0
-                  ? 'border-rose-200 bg-rose-50 text-rose-700'
-                  : 'border-navy-100 bg-white text-navy-600'
-              }
-            />
+          {/* Totals strip, one pair per material */}
+          <div className="grid gap-3 lg:grid-cols-2">
+            {(['poly', 'iso'] as const).map((kind) => (
+              <div
+                key={kind}
+                className="overflow-hidden rounded-xl border-navy-100 bg-white shadow-sm"
+              >
+                <div
+                  className={[
+                    'px-4 py-2 text-[11px] font-semibold tracking-wider uppercase',
+                    GROUP_STYLES[kind].head,
+                  ].join(' ')}
+                >
+                  {MATERIAL_LABELS[kind]} — week totals
+                </div>
+                <dl className="grid grid-cols-3 divide-x divide-navy-100">
+                  {[
+                    { label: 'MRN', value: result.totals[kind].mrn },
+                    { label: 'Usage', value: result.totals[kind].totalUsage },
+                    { label: 'Balance', value: result.totals[kind].balance },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="px-3 py-3">
+                      <dt className="text-[10px] font-semibold tracking-wider text-navy-400 uppercase">
+                        {label}
+                      </dt>
+                      <dd
+                        className={[
+                          'mt-0.5 text-base font-bold tabular-nums',
+                          label === 'Balance'
+                            ? balanceClasses(value)
+                            : 'text-navy-900',
+                        ].join(' ')}
+                      >
+                        {kg(value)}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            ))}
           </div>
 
-          {/* Table */}
+          {/* Table: one chemical per row, Poly then ISO */}
           <div className="overflow-x-auto rounded-2xl border-navy-100 bg-white shadow-sm">
-            <table className="w-full border-collapse text-left text-sm">
+            <table className="w-full min-w-[46rem] border-collapse text-left text-sm">
               <caption className="sr-only">
-                Poly recorded in MRN records, total chemical usage and their
-                balance, per chemical, for week {result.week} of {result.year}.
+                Per chemical, for week {result.week} of {result.year}: MRN
+                quantity, total usage and balance, for Poly and ISO separately.
               </caption>
+
               <thead>
                 <tr className="bg-navy-50/60 text-[11px] tracking-wider text-navy-500 uppercase">
-                  <th scope="col" className="px-4 py-3 font-semibold">
+                  <th scope="col" rowSpan={2} className="px-4 py-3 font-semibold">
                     Chemical
                   </th>
-                  <th scope="col" className="px-4 py-3 text-right font-semibold">
-                    Poly (MRN)
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-right font-semibold">
-                    Total usage
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-right font-semibold">
-                    Balance
-                  </th>
+                  {(['poly', 'iso'] as const).map((kind) => (
+                    <th
+                      key={kind}
+                      scope="colgroup"
+                      colSpan={3}
+                      className={[
+                        'border-l border-white/20 px-4 py-2 text-center font-semibold',
+                        GROUP_STYLES[kind].head,
+                      ].join(' ')}
+                    >
+                      {MATERIAL_LABELS[kind]}
+                    </th>
+                  ))}
+                </tr>
+                <tr className="text-[10px] tracking-wider text-navy-500 uppercase">
+                  {(['poly', 'iso'] as const).flatMap((kind) =>
+                    ['MRN', 'Usage', 'Balance'].map((label, index) => (
+                      <th
+                        key={`${kind}-${label}`}
+                        scope="col"
+                        className={[
+                          'px-4 py-2 text-right font-semibold',
+                          index === 0 ? 'border-l border-navy-100' : '',
+                        ].join(' ')}
+                      >
+                        {label}
+                      </th>
+                    ))
+                  )}
                 </tr>
               </thead>
+
               <tbody>
                 {result.chemicals.map((row) => (
                   <tr
@@ -263,68 +319,43 @@ export function WeeklyReportView() {
                       className="px-4 py-3 text-left font-semibold text-navy-900"
                     >
                       {row.chemical}
-                      {row.hasMismatch ? (
-                        <span
-                          className="ml-2 rounded-md border-amber-200 bg-amber-50 px-1.5 py-0.5 align-middle text-[10px] font-semibold tracking-wide text-amber-700 uppercase"
-                          title={
-                            row.mrnSetCount === 0
-                              ? 'Usage recorded, but no MRN Poly entry for this week'
-                              : 'MRN Poly recorded, but no loading records for this week'
-                          }
-                        >
-                          {row.mrnSetCount === 0 ? 'No MRN' : 'No usage'}
-                        </span>
-                      ) : null}
                     </th>
-                    <td className="px-4 py-3 text-right tabular-nums">
-                      {kg(row.poly)}
-                    </td>
-                    <td className="px-4 py-3 text-right tabular-nums">
-                      {kg(row.totalUsage)}
-                    </td>
-                    <td
-                      className={[
-                        'px-4 py-3 text-right font-semibold tabular-nums',
-                        balanceClasses(row.balance),
-                      ].join(' ')}
-                    >
-                      {kg(row.balance)}
-                    </td>
+                    {(['poly', 'iso'] as const).flatMap((kind) => (
+                      <MaterialCells
+                        key={`${row.chemical}-${kind}`}
+                        material={row[kind]}
+                        firstOfGroup
+                        tint={GROUP_STYLES[kind].cell}
+                      />
+                    ))}
                   </tr>
                 ))}
               </tbody>
+
               <tfoot>
                 <tr className="border-t-2 border-navy-200 bg-navy-50/60 font-semibold text-navy-900">
                   <th scope="row" className="px-4 py-3 text-left">
                     Total
                   </th>
-                  <td className="px-4 py-3 text-right tabular-nums">
-                    {kg(result.totals.poly)}
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums">
-                    {kg(result.totals.totalUsage)}
-                  </td>
-                  <td
-                    className={[
-                      'px-4 py-3 text-right tabular-nums',
-                      balanceClasses(result.totals.balance),
-                    ].join(' ')}
-                  >
-                    {kg(result.totals.balance)}
-                  </td>
+                  {(['poly', 'iso'] as const).map((kind) => (
+                    <TotalsCells key={kind} material={result.totals[kind]} />
+                  ))}
                 </tr>
               </tfoot>
             </table>
           </div>
 
           <p className="text-[11px] leading-relaxed text-navy-400">
-            Poly is the quantity recorded in MRN Input for this week. Total usage
-            applies the same formula as the Daily report:{' '}
+            <span className="font-medium">MRN</span> is the quantity recorded in
+            MRN Input for this week. <span className="font-medium">Usage</span>{' '}
+            is the loading records for the same week, split by tank type: A
+            tanks (A1, A2) count towards Poly, B tanks (B1, B2) towards ISO,
+            using the Daily report formula{' '}
             <span className="font-medium">
               [(After − Before) + Start] − End
             </span>
-            . Balance = Poly − total usage; a negative balance means more was
-            consumed than recorded.
+            . <span className="font-medium">Balance</span> = MRN − usage; a
+            negative balance means more was consumed than recorded.
           </p>
         </section>
       )}
@@ -340,8 +371,8 @@ export function WeeklyReportView() {
             Choose a week
           </h3>
           <p className="mt-1 text-sm text-navy-500">
-            Select a week and year above, then search to compare MRN Poly
-            against recorded usage.
+            Select a week and year above, then search to compare MRN Poly and
+            ISO against recorded usage.
           </p>
         </section>
       )}
@@ -349,32 +380,73 @@ export function WeeklyReportView() {
   );
 }
 
-/** Small stat card used in the results header strip. */
-function StatCard({
-  label,
-  value,
-  unit,
-  icon: Icon,
-  accent,
+/** MRN / usage / balance cells for one material on a chemical row. */
+function MaterialCells({
+  material,
+  firstOfGroup,
+  tint,
 }: {
-  label: string;
-  value: string | number;
-  unit?: string;
-  icon: React.ElementType;
-  accent: string;
+  material: WeeklyMaterialUsage;
+  firstOfGroup?: boolean;
+  tint: string;
 }) {
   return (
-    <div className={['flex flex-col gap-2 rounded-xl border px-4 py-4', accent].join(' ')}>
-      <div className="flex items-center gap-2">
-        <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-        <p className="text-[10px] font-semibold tracking-wider uppercase">
-          {label}
-        </p>
-      </div>
-      <div className="flex items-baseline gap-1">
-        <span className="text-xl font-bold tabular-nums">{value}</span>
-        {unit && <span className="text-[11px] font-medium">{unit}</span>}
-      </div>
-    </div>
+    <>
+      <td
+        className={[
+          'px-4 py-3 text-right tabular-nums',
+          tint,
+          firstOfGroup ? 'border-l border-navy-100' : '',
+        ].join(' ')}
+      >
+        {kg(material.mrn)}
+        {material.hasMismatch ? (
+          <span
+            className="ml-1.5 align-middle text-[10px] font-semibold text-amber-600"
+            title={
+              material.mrnSetCount === 0
+                ? 'Usage recorded, but nothing in MRN for this week'
+                : 'MRN recorded, but no loading records for this week'
+            }
+          >
+            {material.mrnSetCount === 0 ? '!' : '*'}
+          </span>
+        ) : null}
+      </td>
+      <td className={['px-4 py-3 text-right tabular-nums', tint].join(' ')}>
+        {kg(material.totalUsage)}
+      </td>
+      <td
+        className={[
+          'px-4 py-3 text-right font-semibold tabular-nums',
+          tint,
+          balanceClasses(material.balance),
+        ].join(' ')}
+      >
+        {kg(material.balance)}
+      </td>
+    </>
+  );
+}
+
+/** Totals-row cells for one material. */
+function TotalsCells({ material }: { material: WeeklyMaterialUsage }) {
+  return (
+    <>
+      <td className="border-l border-navy-200 px-4 py-3 text-right tabular-nums">
+        {kg(material.mrn)}
+      </td>
+      <td className="px-4 py-3 text-right tabular-nums">
+        {kg(material.totalUsage)}
+      </td>
+      <td
+        className={[
+          'px-4 py-3 text-right tabular-nums',
+          balanceClasses(material.balance),
+        ].join(' ')}
+      >
+        {kg(material.balance)}
+      </td>
+    </>
   );
 }
