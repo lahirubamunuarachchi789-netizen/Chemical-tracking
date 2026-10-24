@@ -108,11 +108,9 @@ export async function fetchWeeklyReport(
   const mrnSetsByChemical = new Map<string, number>();
 
   for (const row of (mrnData ?? []) as MrnRow[]) {
-    // The stored week is authoritative, but re-check the Sri Lanka year so a
-    // sheet filed at a year boundary cannot leak into the wrong report.
-    if (!row.created_at) continue;
-    const parts = getSLDateParts(row.created_at);
-    if (parts.year !== year || parts.week !== week) continue;
+    // The stored week column is authoritative for determining which week
+    // the MRN sheet belongs to. Skip records where the week doesn't match.
+    if (row.week !== week) continue;
 
     const chemical = row.Chemical?.trim();
     if (!chemical) continue;
