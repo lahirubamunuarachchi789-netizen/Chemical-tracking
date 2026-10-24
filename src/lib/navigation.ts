@@ -1,5 +1,10 @@
 import type { LucideIcon } from "lucide-react";
-import { BarChart3, ClipboardList, Database } from "lucide-react";
+import {
+  BarChart3,
+  ClipboardList,
+  Database,
+  FileSpreadsheet,
+} from "lucide-react";
 
 /**
  * Sidebar navigation for the signed-in area.
@@ -15,6 +20,13 @@ export interface NavigationItem {
 }
 
 export const navigationItems: NavigationItem[] = [
+  {
+    label: "MRN Input",
+    href: "/dashboard/mrn-input",
+    description:
+      "Capture the MRN sheet: chemical type and Poly / ISO weights for each of the ten loading sets.",
+    icon: FileSpreadsheet,
+  },
   {
     label: "Chemical Usage Input",
     href: "/dashboard/chemical-usage-input",
