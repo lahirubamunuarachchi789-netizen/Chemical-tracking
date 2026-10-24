@@ -20,7 +20,6 @@ interface MrnRow {
   Poly: number | null;
   ISO: number | null;
   week: number | null;
-  created_at: string | null;
 }
 
 /** A row from ChemicalLoadingRecords, as far as the weekly report needs it. */
@@ -121,24 +120,22 @@ export async function fetchWeeklyReport(
   };
 
   // ---- MRNRecords: per-material quantity --------------------------------
+  // Selected by the user's week, straight from the week column: an MRN sheet
+  // belongs to the week it was filed under, not to the date it was entered.
+  // No created_at window here, so a sheet entered late (or filed for another
+  // week) is reported against the week the user picked.
   const { data: mrnData, error: mrnError } = await supabase
     .from('MRNRecords')
-    .select('Chemical, Poly, ISO, week, created_at')
-    .eq('week', week)
-    .gte('created_at', from)
-    .lte('created_at', to);
+    .select('Chemical, Poly, ISO, week')
+    .eq('week', week);
 
   if (mrnError) {
     return { success: false, error: `MRN records: ${mrnError.message}` };
   }
 
   for (const row of (mrnData ?? []) as MrnRow[]) {
-    if (!row.created_at) continue;
-
-    // The stored week is authoritative, but re-check the Sri Lanka year so a
-    // sheet filed at a year boundary cannot leak into the wrong report.
-    const parts = getSLDateParts(row.created_at);
-    if (parts.year !== year || parts.week !== week) continue;
+    // Defensive re-check: the column is the only criterion for inclusion.
+    if (row.week !== week) continue;
 
     const chemical = row.Chemical?.trim();
     // 'No Chemical' means nothing was loaded, so it has no place in the

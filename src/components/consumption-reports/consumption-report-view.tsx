@@ -5,6 +5,7 @@ import {
   BarChart3,
   AlertCircle,
   CheckCircle2,
+  Download,
   RefreshCw,
   X,
 } from 'lucide-react';
@@ -16,6 +17,7 @@ import {
   fetchDailyRecords,
   type DailyRecord,
 } from '@/app/dashboard/consumption-reports/actions';
+import { downloadDailyReportPdf } from './daily-report-pdf';
 import {
   type ConsumptionFilters,
   type DailyUsage,
@@ -31,6 +33,7 @@ export function ConsumptionReportView() {
   const [results, setResults] = useState<DailyUsage[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   // Filters from the last search, reused when a daily card is opened.
   const [activeFilters, setActiveFilters] = useState<ConsumptionFilters>({});
 
@@ -117,6 +120,18 @@ export function ConsumptionReportView() {
     []
   );
 
+  /** Builds the daily report PDF in the browser and saves it. */
+  const handleDownload = useCallback(async () => {
+    if (!results || results.length === 0 || downloading) return;
+    setDownloading(true);
+    try {
+      await downloadDailyReportPdf(results, activeFilters);
+    } catch {
+      setError('Could not generate the PDF. Please try again.');
+    } finally {
+      setDownloading(false);
+    }
+  }, [results, activeFilters, downloading]);
   const totalUsage = results
     ? results.reduce((sum, day) => sum + day.totalUsage, 0)
     : 0;
@@ -213,9 +228,24 @@ export function ConsumptionReportView() {
             <h2 className="text-sm font-semibold text-navy-900 uppercase tracking-wider">
               Daily consumption
             </h2>
-            <p className="text-xs text-navy-500">
-              {results.length} day{results.length === 1 ? '' : 's'} in Sri Lanka time
-            </p>
+            <div className="flex items-center gap-3">
+              <p className="text-xs text-navy-500">
+                {results.length} day{results.length === 1 ? '' : 's'} in Sri Lanka time
+              </p>
+              <button
+                type="button"
+                onClick={() => void handleDownload()}
+                disabled={downloading}
+                className="inline-flex items-center gap-1.5 rounded-lg border-navy-200 bg-white px-3 py-1.5 text-xs font-semibold text-navy-700 shadow-sm transition hover:bg-navy-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {downloading ? (
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                )}
+                {downloading ? 'Preparingâ€¦' : 'Download PDF'}
+              </button>
+            </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

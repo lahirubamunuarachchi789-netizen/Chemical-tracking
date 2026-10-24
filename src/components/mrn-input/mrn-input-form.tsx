@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { AlertCircle, CheckCircle2, RotateCcw, Send } from "lucide-react";
 
 import {
@@ -64,6 +64,76 @@ export function MrnInputForm({ createdBy }: { createdBy: string | null }) {
     setRows(createEmptyRows());
     setSaveError(null);
     setSaveSuccess(false);
+  }
+
+  /**
+   * Arrow-key navigation between the set controls.
+   *
+   * Each control is tagged with data-row / data-field, and the form carries a
+   * ref, so a keypress can find the neighbouring control directly instead of
+   * walking DOM tab order (which would also visit the buttons).
+   *
+   *   Left / Right   move between the boxes of the same set
+   *   Up / Down      move to the same box in the previous / next set
+   *
+   * Disabled boxes ("No Chemical" rows) are skipped, so Up/Down never lands on
+   * a field the user cannot edit.
+   */
+  const formRef = useRef<HTMLFormElement>(null);
+
+  function handleArrowKey(
+    event: React.KeyboardEvent<HTMLElement>,
+    rowIndex: number,
+    field: "chemical" | "poly" | "iso"
+  ) {
+    const key = event.key;
+    if (
+      key !== "ArrowLeft" &&
+      key !== "ArrowRight" &&
+      key !== "ArrowUp" &&
+      key !== "ArrowDown"
+    ) {
+      return;
+    }
+
+    const fields: Array<"chemical" | "poly" | "iso"> = ["chemical", "poly", "iso"];
+    let nextRow = rowIndex;
+    let nextField = field;
+
+    if (key === "ArrowLeft" || key === "ArrowRight") {
+      const position = fields.indexOf(field) + (key === "ArrowRight" ? 1 : -1);
+      // At the edge of a set, leave the key alone.
+      if (position < 0 || position >= fields.length) return;
+      nextField = fields[position];
+    } else {
+      // Up/Down: same box, adjacent set, skipping any box that is disabled.
+      const step = key === "ArrowDown" ? 1 : -1;
+      let found = false;
+      for (let r = rowIndex + step; r >= 0 && r < rows.length; r += step) {
+        const candidate = formRef.current?.querySelector(
+          `[data-row="${r}"][data-field="${field}"] input, [data-row="${r}"][data-field="${field}"] select`
+        ) as HTMLInputElement | HTMLSelectElement | null;
+        if (candidate && !candidate.disabled) {
+          nextRow = r;
+          found = true;
+          break;
+        }
+      }
+      if (!found) return;
+    }
+
+    // The data attributes sit on a wrapper so a label-less control still has a
+    // stable handle; focus the real control inside it, not the wrapper.
+    const control = formRef.current?.querySelector(
+      `[data-row="${nextRow}"][data-field="${nextField}"] input, [data-row="${nextRow}"][data-field="${nextField}"] select`
+    ) as HTMLInputElement | HTMLSelectElement | null;
+    if (!control || control.disabled) return;
+
+    // Only take the key once a real target exists, so arrow keys still work
+    // normally inside a select that has not been opened.
+    event.preventDefault();
+    control.focus();
+    if (control instanceof HTMLInputElement) control.select();
   }
 
   /** Rows that carry any data at all. */
@@ -166,6 +236,7 @@ export function MrnInputForm({ createdBy }: { createdBy: string | null }) {
 
   return (
     <form
+      ref={formRef}
       className="mt-6 overflow-hidden rounded-2xl border-navy-100 bg-white shadow-sm"
       onSubmit={(event) => {
         event.preventDefault();
@@ -238,8 +309,13 @@ export function MrnInputForm({ createdBy }: { createdBy: string | null }) {
                 </span>
               </span>
 
-              <SelectField
-                label="Chemical"
+              <div
+                data-row={index}
+                data-field="chemical"
+                onKeyDown={(event) => handleArrowKey(event, index, "chemical")}
+              >
+                <SelectField
+                  label="Chemical"
                 className="sm:[&>label]:sr-only"
                 value={row.chemical}
                 onChange={(value) =>
@@ -250,30 +326,43 @@ export function MrnInputForm({ createdBy }: { createdBy: string | null }) {
                       : { chemical: value }
                   )
                 }
-                options={chemicals}
-              />
+                  options={chemicals}
+                />
+              </div>
 
-              <TextField
-                label="Poly"
+              <div
+                data-row={index}
+                data-field="poly"
+                onKeyDown={(event) => handleArrowKey(event, index, "poly")}
+              >
+                <TextField
+                  label="Poly"
                 className="sm:[&>label]:sr-only"
                 value={noChemical ? "0" : row.poly}
                 onChange={(value) => updateRow(index, { poly: value })}
                 placeholder="0.000"
                 inputMode="decimal"
-                suffix="kg"
-                disabled={noChemical}
-              />
+                  suffix="kg"
+                  disabled={noChemical}
+                />
+              </div>
 
-              <TextField
-                label="ISO"
+              <div
+                data-row={index}
+                data-field="iso"
+                onKeyDown={(event) => handleArrowKey(event, index, "iso")}
+              >
+                <TextField
+                  label="ISO"
                 className="sm:[&>label]:sr-only"
                 value={noChemical ? "0" : row.iso}
                 onChange={(value) => updateRow(index, { iso: value })}
                 placeholder="0.000"
                 inputMode="decimal"
-                suffix="kg"
-                disabled={noChemical}
-              />
+                  suffix="kg"
+                  disabled={noChemical}
+                />
+              </div>
             </li>
           );
         })}
