@@ -2,8 +2,9 @@
   "name": "chemical-tracking",
   "version": "1.0.0",
   "private": true,
-  "description": "Consumption Reports — Daily card detail view for Chemical Tracking",
+  "description": "Consumption Reports - Daily card detail view for Chemical Tracking",
   "scripts": {
+    "build": "echo 'Static site ready for deployment'",
     "vercel-build": "echo 'Static site ready for deployment'"
   }
 }
