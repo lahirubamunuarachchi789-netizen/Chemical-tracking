@@ -139,3 +139,101 @@ export function tierClasses(tier: ReturnType<typeof usageTier>): string {
       return `${base} border-red-200 bg-red-50 text-red-700`;
   }
 }
+
+/**
+ * One chemical's line in the Weekly Report.
+ *
+ * `poly` and `totalUsage` come from two different tables but describe the same
+ * week, so they can be compared: balance = poly - totalUsage.
+ */
+export interface WeeklyChemicalUsage {
+  chemical: string;
+  /** Poly quantity recorded in MRNRecords for this week and year. */
+  poly: number;
+  /** Total usage from ChemicalLoadingRecords for the same week and year. */
+  totalUsage: number;
+  /** poly − totalUsage. Negative means more consumed than recorded. */
+  balance: number;
+  /** Number of MRN sets contributing to `poly`. */
+  mrnSetCount: number;
+  /** Number of loading records contributing to `totalUsage`. */
+  recordCount: number;
+  /** True when the chemical has usage but no MRN entry, or the reverse. */
+  hasMismatch: boolean;
+}
+
+/** Result of the weekly report query. */
+export interface WeeklyReportResult {
+  year: number;
+  week: number;
+  /** Sri Lanka dates the ISO week covers, inclusive. */
+  weekStart: string;
+  weekEnd: string;
+  chemicals: WeeklyChemicalUsage[];
+  totals: {
+    poly: number;
+    totalUsage: number;
+    balance: number;
+    chemicalCount: number;
+  };
+}
+
+/**
+ * Accumulate per-chemical weekly figures.
+ *
+ * Kept pure and separate from the Supabase call so the arithmetic can be
+ * unit-tested and so both tables are merged by one rule: every chemical that
+ * appears in EITHER source must appear in the report, with a zero default for
+ * the side that has nothing.
+ *
+ * @param polyByChemical Poly quantity per chemical, from MRNRecords.
+ * @param usageByChemical Total usage per chemical, from ChemicalLoadingRecords.
+ * @param mrnSetsByChemical Number of MRN sets per chemical.
+ * @param recordsByChemical Number of loading records per chemical.
+ */
+export function buildWeeklyReport(
+  polyByChemical: Map<string, number>,
+  usageByChemical: Map<string, number>,
+  mrnSetsByChemical: Map<string, number>,
+  recordsByChemical: Map<string, number>
+): Omit<WeeklyReportResult, 'year' | 'week' | 'weekStart' | 'weekEnd'> {
+  // Union, so a chemical is listed if it has MRN poly, usage, or both.
+  const names = new Set<string>([
+    ...polyByChemical.keys(),
+    ...usageByChemical.keys(),
+  ]);
+
+  const chemicals: WeeklyChemicalUsage[] = [...names]
+    .map((chemical) => {
+      const poly = polyByChemical.get(chemical) ?? 0;
+      const totalUsage = usageByChemical.get(chemical) ?? 0;
+      const mrnSetCount = mrnSetsByChemical.get(chemical) ?? 0;
+      const recordCount = recordsByChemical.get(chemical) ?? 0;
+
+      return {
+        chemical,
+        poly,
+        totalUsage,
+        balance: poly - totalUsage,
+        mrnSetCount,
+        recordCount,
+        // A chemical in only one of the two tables is worth flagging: either
+        // nothing was loaded against recorded poly, or usage happened with no
+        // Poly recorded at all.
+        hasMismatch: mrnSetCount === 0 || recordCount === 0,
+      };
+    })
+    .sort((a, b) => a.chemical.localeCompare(b.chemical));
+
+  const totals = chemicals.reduce(
+    (acc, row) => ({
+      poly: acc.poly + row.poly,
+      totalUsage: acc.totalUsage + row.totalUsage,
+      balance: acc.balance + row.balance,
+      chemicalCount: acc.chemicalCount + 1,
+    }),
+    { poly: 0, totalUsage: 0, balance: 0, chemicalCount: 0 }
+  );
+
+  return { chemicals, totals };
+}
