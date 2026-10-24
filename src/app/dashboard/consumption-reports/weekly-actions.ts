@@ -12,6 +12,7 @@ import {
   type WeeklyMaterialUsage,
   type WeeklyReportResult,
 } from '@/lib/consumption-reports';
+import { NO_CHEMICAL } from '@/lib/chemical-usage';
 
 /** A row from MRNRecords, as far as the weekly report needs it. */
 interface MrnRow {
@@ -140,7 +141,9 @@ export async function fetchWeeklyReport(
     if (parts.year !== year || parts.week !== week) continue;
 
     const chemical = row.Chemical?.trim();
-    if (!chemical) continue;
+    // 'No Chemical' means nothing was loaded, so it has no place in the
+    // Poly/ISO balance report.
+    if (!chemical || chemical === NO_CHEMICAL) continue;
 
     for (const kind of ['poly', 'iso'] as const) {
       const weight = kind === 'poly' ? row.Poly : row.ISO;
@@ -171,7 +174,7 @@ export async function fetchWeeklyReport(
     if (parts.year !== year || parts.week !== week) continue;
 
     const chemical = record.Chemical?.trim();
-    if (!chemical) continue;
+    if (!chemical || chemical === NO_CHEMICAL) continue;
 
     const kind = materialFromTank(record.LineCode);
     if (!kind) continue;

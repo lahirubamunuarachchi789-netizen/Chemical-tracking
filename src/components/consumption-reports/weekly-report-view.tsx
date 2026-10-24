@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import {
   AlertCircle,
   CalendarRange,
+  Download,
   RefreshCw,
   Search,
 } from 'lucide-react';
@@ -16,6 +17,7 @@ import {
   type WeeklyReportResult,
 } from '@/lib/consumption-reports';
 import { fetchWeeklyReport } from '@/app/dashboard/consumption-reports/weekly-actions';
+import { downloadWeeklyReportPdf } from './weekly-report-pdf';
 
 /** Formats a weight with 2 decimals and thousands separators. */
 function kg(value: number): string {
@@ -68,6 +70,7 @@ export function WeeklyReportView() {
   const [result, setResult] = useState<WeeklyReportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const years = CONSUMPTION_FILTERS.years();
 
@@ -97,6 +100,19 @@ export function WeeklyReportView() {
       setSearching(false);
     }
   }, [week, year]);
+
+  /** Builds the PDF in the browser and saves it. */
+  const handleDownload = useCallback(async () => {
+    if (!result || downloading) return;
+    setDownloading(true);
+    try {
+      await downloadWeeklyReportPdf(result);
+    } catch {
+      setError('Could not generate the PDF. Please try again.');
+    } finally {
+      setDownloading(false);
+    }
+  }, [result, downloading]);
 
   const hasSearched = result !== null;
 
@@ -208,7 +224,7 @@ export function WeeklyReportView() {
       {/* -------------------------------------------------- Results */}
       {hasSearched && !error && result.chemicals.length > 0 && (
         <section className="space-y-4">
-          <div className="flex flex-wrap items-end justify-between gap-2 border-b border-navy-100 pb-3">
+          <div className="flex flex-wrap items-end justify-between gap-3 border-b border-navy-100 pb-3">
             <div>
               <h2 className="text-sm font-semibold tracking-wider text-navy-900 uppercase">
                 Weekly Poly and ISO balance
@@ -219,6 +235,20 @@ export function WeeklyReportView() {
                 chemical{result.totals.chemicalCount === 1 ? '' : 's'}
               </p>
             </div>
+
+            <button
+              type="button"
+              onClick={() => void handleDownload()}
+              disabled={downloading}
+              className="inline-flex items-center gap-2 rounded-lg border-navy-200 bg-white px-4 py-2 text-sm font-semibold text-navy-700 shadow-sm transition hover:bg-navy-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {downloading ? (
+                <RefreshCw className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Download className="h-4 w-4" aria-hidden="true" />
+              )}
+              {downloading ? 'Preparing…' : 'Download PDF'}
+            </button>
           </div>
 
           {/* Totals strip, one pair per material */}
