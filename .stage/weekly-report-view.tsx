@@ -277,7 +277,7 @@ export function WeeklyReportView() {
                       ) : null}
                     </th>
                     <td className="px-4 py-3 text-right tabular-nums">
-                      {kg(row.poly)}
+                      {row.mrnSetCount > 0 ? kg(row.poly) : '-' }
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums">
                       {kg(row.totalUsage)}
