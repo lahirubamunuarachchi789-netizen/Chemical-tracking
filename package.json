@@ -4,7 +4,6 @@
   "private": true,
   "description": "Consumption Reports - Daily card detail view for Chemical Tracking",
   "scripts": {
-    "build": "echo 'Static site ready for deployment'",
     "vercel-build": "echo 'Static site ready for deployment'"
   }
 }
