@@ -326,12 +326,14 @@ function DayDetailDialog({
     const after = record.AfterWeight ?? 0;
     const loaded = after - before;
     const start = record.StartWeight ?? 0;
+    // Final Start Weight = Start Weight + [After - Before]
+    const finalStart = start + loaded;
     const consumption =
       typeof record.EndWeight === 'number'
-        ? start + loaded - record.EndWeight
-        : start + loaded;
+        ? finalStart - record.EndWeight
+        : finalStart;
 
-    return { record, loaded, consumption };
+    return { record, loaded, finalStart, consumption };
   });
 
   return (
@@ -428,41 +430,55 @@ function DayDetailDialog({
                       Loaded
                     </th>
                     <th scope="col" className="px-3 py-2 font-semibold">
+                      Final Start Weight
+                    </th>
+                    <th scope="col" className="px-3 py-2 font-semibold">
+                      End Weight
+                    </th>
+                    <th scope="col" className="px-3 py-2 font-semibold">
                       Usage
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {details.map(({ record, loaded, consumption }, index) => (
-                    <tr
-                      key={`${record.CreatedAt}-${index}`}
-                      className="border-t border-navy-100 text-navy-800"
-                    >
-                      <td className="px-3 py-2">
-                        <span className="font-medium">
-                          {record.LineCode || '—'}
-                        </span>
-                        <span className="block text-xs text-navy-500">
-                          {record.RangeCode || '—'}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 tabular-nums">
-                        {formatWeight(record.StartWeight)}
-                      </td>
-                      <td className="px-3 py-2 tabular-nums">
-                        {formatWeight(record.BeforeWeight)}
-                      </td>
-                      <td className="px-3 py-2 tabular-nums">
-                        {formatWeight(record.AfterWeight)}
-                      </td>
-                      <td className="px-3 py-2 tabular-nums">
-                        {formatWeight(loaded)}
-                      </td>
-                      <td className="px-3 py-2 font-semibold text-navy-900 tabular-nums">
-                        {formatWeight(consumption)}
-                      </td>
-                    </tr>
-                  ))}
+                  {details.map(
+                    ({ record, loaded, finalStart, consumption }, index) => (
+                      <tr
+                        key={`${record.CreatedAt}-${index}`}
+                        className="border-t border-navy-100 text-navy-800"
+                      >
+                        <td className="px-3 py-2">
+                          <span className="font-medium">
+                            {record.LineCode || '—'}
+                          </span>
+                          <span className="block text-xs text-navy-500">
+                            {record.RangeCode || '—'}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 tabular-nums">
+                          {formatWeight(record.StartWeight)}
+                        </td>
+                        <td className="px-3 py-2 tabular-nums">
+                          {formatWeight(record.BeforeWeight)}
+                        </td>
+                        <td className="px-3 py-2 tabular-nums">
+                          {formatWeight(record.AfterWeight)}
+                        </td>
+                        <td className="px-3 py-2 tabular-nums">
+                          {formatWeight(loaded)}
+                        </td>
+                        <td className="px-3 py-2 tabular-nums">
+                          {formatWeight(finalStart)}
+                        </td>
+                        <td className="px-3 py-2 tabular-nums">
+                          {formatWeight(record.EndWeight)}
+                        </td>
+                        <td className="px-3 py-2 font-semibold text-navy-900 tabular-nums">
+                          {formatWeight(consumption)}
+                        </td>
+                      </tr>
+                    )
+                  )}
                 </tbody>
               </table>
             </div>
