@@ -120,10 +120,11 @@ export async function fetchWeeklyReport(
   };
 
   // ---- MRNRecords: per-material quantity --------------------------------
-  // Selected by the user's week, straight from the week column: an MRN sheet
-  // belongs to the week it was filed under, not to the date it was entered.
-  // No created_at window here, so a sheet entered late (or filed for another
-  // week) is reported against the week the user picked.
+  // Filtered by the week the user selected, using the week column only. The
+  // week column records which week the MRN sheet belongs to (see MRN Input),
+  // while created_at is just when the row was entered - so it is deliberately
+  // not used here. Matching is year-agnostic because the column is 1-53 with
+  // no year: the report's year governs the usage side, not the MRN side.
   const { data: mrnData, error: mrnError } = await supabase
     .from('MRNRecords')
     .select('Chemical, Poly, ISO, week')
@@ -134,8 +135,9 @@ export async function fetchWeeklyReport(
   }
 
   for (const row of (mrnData ?? []) as MrnRow[]) {
-    // Defensive re-check: the column is the only criterion for inclusion.
-    if (row.week !== week) continue;
+    // Belt and braces: only rows filed under the selected week may count,
+    // whatever the query layer returned.
+    if (row.week === null || Number(row.week) !== week) continue;
 
     const chemical = row.Chemical?.trim();
     // 'No Chemical' means nothing was loaded, so it has no place in the
