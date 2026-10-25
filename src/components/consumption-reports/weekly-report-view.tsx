@@ -34,15 +34,21 @@ function balanceClasses(balance: number): string {
   return 'text-navy-600';
 }
 
-/** Colour hint for a material group, so Poly and ISO read apart at a glance. */
+/**
+ * Colour hint for a material group, so Poly and ISO read apart at a glance.
+ *
+ * Poly carries the app's sheet blue; ISO uses the green already reserved for
+ * good balances (emerald), so the two groups are distinguishable without
+ * relying on the group label alone.
+ */
 const GROUP_STYLES: Record<MaterialKind, { head: string; cell: string }> = {
   poly: {
     head: 'bg-sheet-600 text-white',
     cell: 'bg-sheet-50/40',
   },
   iso: {
-    head: 'bg-navy-700 text-white',
-    cell: 'bg-navy-50/40',
+    head: 'bg-emerald-700 text-white',
+    cell: 'bg-emerald-50/40',
   },
 };
 
@@ -312,7 +318,7 @@ export function WeeklyReportView() {
                       scope="colgroup"
                       colSpan={3}
                       className={[
-                        'border-l border-white/20 px-4 py-2 text-center font-semibold',
+                        'border-l border-white/20 px-4 py-2 text-center font-semibold tracking-wider',
                         GROUP_STYLES[kind].head,
                       ].join(' ')}
                     >
@@ -328,6 +334,7 @@ export function WeeklyReportView() {
                         scope="col"
                         className={[
                           'px-4 py-2 text-right font-semibold',
+                          GROUP_STYLES[kind].cell,
                           index === 0 ? 'border-l border-navy-100' : '',
                         ].join(' ')}
                       >

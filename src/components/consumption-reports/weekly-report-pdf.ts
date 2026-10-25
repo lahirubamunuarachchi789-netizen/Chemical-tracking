@@ -9,6 +9,21 @@ function kg(value: number): string {
 }
 
 /**
+ * Column-group colours, mirroring GROUP_STYLES in the on-screen view: Poly is
+ * the app's sheet blue, ISO is green.
+ */
+const GROUP_FILLS = {
+  poly: [51, 86, 149], // sheet-600 #335695
+  iso: [4, 120, 87], // emerald-700 #047857
+} as const;
+
+/** Columns belonging to each material group, in table order. */
+const GROUP_COLUMNS = {
+  poly: [1, 2, 3],
+  iso: [4, 5, 6],
+} as const;
+
+/**
  * Build and save the weekly report as a PDF.
  *
  * jsPDF and the autoTable plugin are imported dynamically so their weight is
@@ -42,22 +57,30 @@ export async function downloadWeeklyReportPdf(
     62
   );
 
-  // Totals summary line
+  // Totals summary line. Each material's label is set in its group colour so
+  // the blue/green split is obvious even before the table.
   doc.setFontSize(9);
+  const summaryY = 78;
+  doc.setTextColor(...GROUP_FILLS.poly);
+  doc.text('Poly:', 40, summaryY);
   doc.setTextColor(100, 116, 139);
   doc.text(
-    `Poly: MRN ${kg(report.totals.poly.mrn)} kg · Usage ${kg(
+    `MRN ${kg(report.totals.poly.mrn)} kg · Usage ${kg(
       report.totals.poly.totalUsage
     )} kg · Balance ${kg(report.totals.poly.balance)} kg`,
-    40,
-    78
+    40 + doc.getTextWidth('Poly: '),
+    summaryY
   );
+
+  doc.setTextColor(...GROUP_FILLS.iso);
+  doc.text('ISO:', 40, summaryY + 14);
+  doc.setTextColor(100, 116, 139);
   doc.text(
-    `ISO:  MRN ${kg(report.totals.iso.mrn)} kg · Usage ${kg(
+    `MRN ${kg(report.totals.iso.mrn)} kg · Usage ${kg(
       report.totals.iso.totalUsage
     )} kg · Balance ${kg(report.totals.iso.balance)} kg`,
-    40,
-    92
+    40 + doc.getTextWidth('ISO:  '),
+    summaryY + 14
   );
 
   // ------------------------------------------------------------ Table
@@ -92,8 +115,10 @@ export async function downloadWeeklyReportPdf(
     foot: [totalRow],
     theme: 'grid',
     styles: { fontSize: 9, cellPadding: 5, textColor: [30, 41, 59] },
+    // Only the Chemical column stays neutral; each material group gets its own
+    // header colour in didParseCell below.
     headStyles: {
-      fillColor: [13, 100, 108],
+      fillColor: [36, 66, 125],
       textColor: 255,
       fontStyle: 'bold',
       halign: 'center',
@@ -112,10 +137,21 @@ export async function downloadWeeklyReportPdf(
       5: { halign: 'right' },
       6: { halign: 'right' },
     },
-    // Colour a negative balance red so it stands out on paper too.
+    // Per-material header colour, then a negative-balance cue for the body.
     didParseCell: (data) => {
+      if (data.section === 'head') {
+        // The Chemical column keeps the neutral navy; Poly headers are blue,
+        // ISO headers green - the same split as the on-screen table.
+        if ((GROUP_COLUMNS.poly as readonly number[]).includes(data.column.index)) {
+          data.cell.styles.fillColor = [...GROUP_FILLS.poly];
+        } else if ((GROUP_COLUMNS.iso as readonly number[]).includes(data.column.index)) {
+          data.cell.styles.fillColor = [...GROUP_FILLS.iso];
+        }
+        return;
+      }
+
       const isBalance = data.column.index === 3 || data.column.index === 6;
-      if (!isBalance || data.section === 'head') return;
+      if (!isBalance) return;
       const value = Number(String(data.cell.raw).replace(/,/g, ''));
       if (Number.isFinite(value) && value < 0) {
         data.cell.styles.textColor = [185, 28, 28];
