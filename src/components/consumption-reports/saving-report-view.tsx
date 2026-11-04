@@ -19,6 +19,7 @@ import { downloadSavingReportPdf } from './saving-report-pdf';
 
 /** Formats a weight with 2 decimals and thousands separators. */
 function kg(value: number): string {
+  if (!Number.isFinite(value)) return '-';
   return value.toLocaleString('en-LK', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
