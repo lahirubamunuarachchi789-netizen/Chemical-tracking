@@ -1,9 +1,11 @@
 {
   "version": 2,
   "builds": [
+    { "src": "api/saving-report.js", "use": "@vercel/node" },
     { "src": "package.json", "use": "@vercel/static", "config": { "dist": "." } }
   ],
   "routes": [
+    { "src": "/api/(.*)", "dest": "/api/$1" },
     { "src": "/css/(.*)", "dest": "/css/$1" },
     { "src": "/js/(.*)", "dest": "/js/$1" },
     { "src": "/(.*)", "dest": "/index.html" }

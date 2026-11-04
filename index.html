@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Consumption Reports — Daily</title>
+  <title>Consumption Reports</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -69,6 +69,21 @@
             <div class="card-meta">
               <span class="meta-chip">Updated today</span>
               <span class="meta-chip">Coming soon</span>
+            </div>
+            <div class="card-arrow">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l8 6-8 6z"/></svg>
+            </div>
+          </div>
+        </article>
+
+        <article class="report-card card-saving" data-report="saving" tabindex="0" role="button" aria-pressed="false" aria-label="Open Saving Report">
+          <div class="card-body">
+            <div class="card-badge">Saving</div>
+            <h2 class="card-title">Saving Report</h2>
+            <p class="card-desc">Weekly balance by chemical across a selected year.</p>
+            <div class="card-meta">
+              <span class="meta-chip">MRN vs. usage</span>
+              <span class="meta-chip">Search by year</span>
             </div>
             <div class="card-arrow">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l8 6-8 6z"/></svg>
@@ -147,6 +162,42 @@
             <li><b>End Weight</b> equals the Total Starting Weight for the day.</li>
           </ul>
           <p class="note-hint">Tap any numbered cell to adjust the value; computed rows update automatically.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="detail-panel" id="saving-detail" role="dialog" aria-modal="true" aria-label="Saving Report" hidden>
+    <div class="detail-backdrop" id="saving-backdrop"></div>
+    <div class="detail-content saving-report-content">
+      <div class="detail-header">
+        <button class="close-btn" id="close-saving" aria-label="Close Saving Report">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+        <div class="detail-title-wrap">
+          <div class="detail-kicker">Consumption Reports</div>
+          <h2 class="detail-title">Saving Report</h2>
+        </div>
+        <button class="btn-export" id="export-saving" type="button" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20h14v-2H5v2zM19 9H5V7h14v2z"/><path d="M12 12l-4 4h3v8h2v-8h3l-4-4z"/></svg>
+          Export PDF
+        </button>
+      </div>
+
+      <div class="detail-body">
+        <form class="saving-search" id="saving-search">
+          <label for="saving-year">Year</label>
+          <select id="saving-year" name="year" required></select>
+          <button class="btn-search" id="saving-search-button" type="submit">Search</button>
+        </form>
+        <p class="saving-status" id="saving-status" role="status" aria-live="polite">Select a year and search to view weekly chemical balances.</p>
+        <div class="table-wrap saving-table-wrap" id="saving-table-wrap" hidden>
+          <table class="report-table saving-table" id="saving-table" aria-label="Weekly chemical balances">
+            <caption id="saving-caption"></caption>
+            <thead id="saving-head"></thead>
+            <tbody id="saving-body"></tbody>
+            <tfoot id="saving-foot"></tfoot>
+          </table>
         </div>
       </div>
     </div>
