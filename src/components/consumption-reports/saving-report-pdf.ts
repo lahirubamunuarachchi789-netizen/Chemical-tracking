@@ -91,7 +91,7 @@ export async function downloadSavingReportPdf(
     body,
     foot: [totalRow],
     theme: 'grid',
-    styles: { fontSize: 8.5, cellPadding: 4, textColor: [30, 41, 59] },
+    styles: { fontSize: 8.5, cellPadding: 4, textColor: [30, 41, 59], lineColor: [0, 0, 0] },
     headStyles: {
       fillColor: [36, 66, 125],
       textColor: 255,
