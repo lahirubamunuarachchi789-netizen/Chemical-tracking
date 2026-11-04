@@ -1,26 +1,31 @@
 'use client';
 
 import { useState } from 'react';
-import { CalendarDays, CalendarRange } from 'lucide-react';
+import { CalendarDays, CalendarRange, Save } from 'lucide-react';
 
 import { ConsumptionReportView } from './consumption-report-view';
 import { WeeklyReportView } from './weekly-report-view';
+import { SavingReportView } from './saving-report-view';
 
-type ReportTab = 'daily' | 'weekly';
+type ReportTab = 'daily' | 'weekly' | 'saving';
 
 const TABS: { key: ReportTab; label: string; icon: React.ElementType }[] = [
   { key: 'daily', label: 'Daily Report', icon: CalendarDays },
   { key: 'weekly', label: 'Weekly Report', icon: CalendarRange },
+  { key: 'saving', label: 'Saving Report', icon: Save },
 ];
 
 /**
  * Consumption Reports container.
  *
- * Two report types over the same underlying records:
+ * Three report types over the same underlying records:
  *   - Daily  : usage per calendar day, with a per-day detail dialog.
- *   - Weekly : Poly recorded in MRNRecords against total usage, per chemical.
+ *   - Weekly : Poly recorded in MRNRecords against total usage, per chemical,
+ *              for one ISO week of one year.
+ *   - Saving : per-chemical balance (MRN minus usage) per ISO week of a year,
+ *              with weeks as rows and chemicals as columns.
  *
- * Both views stay mounted while hidden, so switching tabs does not throw away
+ * All views stay mounted while hidden, so switching tabs does not throw away
  * a search the user has already run.
  */
 export function ConsumptionReportsTabs() {
@@ -74,6 +79,15 @@ export function ConsumptionReportsTabs() {
         hidden={tab !== 'weekly'}
       >
         <WeeklyReportView />
+      </div>
+
+      <div
+        role="tabpanel"
+        id="saving-report-panel"
+        aria-labelledby="saving-report-tab"
+        hidden={tab !== 'saving'}
+      >
+        <SavingReportView />
       </div>
     </div>
   );
