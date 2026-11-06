@@ -64,7 +64,8 @@ function round2(value: number): number {
 }
 
 /**
- * Saving Report: for every ISO week of one year, show each chemical's balance.
+ * Saving Report: for every ISO week of one year, show each chemical's Poly and
+ * ISO balances separately.
  *
  * Balance follows the same logic as the Weekly Report, computed per material:
  *
@@ -89,10 +90,16 @@ export interface SavingReportResult {
   year: number;
   weeks: number[]; // ISO week numbers (1-53) that have data, ascending
   chemicals: string[]; // chemical names, ascending
-  balances: Record<number, Record<string, number>>; // week -> chemical -> balance (kg)
+  balances: Record<number, Record<string, number>>; // week -> chemical -> total balance (kg)
+  polyBalances: Record<number, Record<string, number>>; // week -> chemical -> Poly balance (kg)
+  isoBalances: Record<number, Record<string, number>>; // week -> chemical -> ISO balance (kg)
   weekTotals: Record<number, number>; // week -> sum of chemical balances (kg)
   chemicalTotals: Record<string, number>; // chemical -> sum across weeks (kg)
+  polyChemicalTotals: Record<string, number>; // chemical -> sum of Poly balances (kg)
+  isoChemicalTotals: Record<string, number>; // chemical -> sum of ISO balances (kg)
   grandTotal: number; // sum of all week balances (kg)
+  polyGrandTotal: number; // sum of all Poly balances (kg)
+  isoGrandTotal: number; // sum of all ISO balances (kg)
   weekRange: Record<number, { start: string; end: string }>; // SL dates, YYYY-MM-DD
 }
 
@@ -219,12 +226,20 @@ export async function fetchSavingReport(
   //   ISO balance  = round2(round2(isoMrn)  - round2(isoUsage))
   //   Total balance = Poly balance + ISO balance
   const balances: Record<number, Record<string, number>> = {};
+  const polyBalances: Record<number, Record<string, number>> = {};
+  const isoBalances: Record<number, Record<string, number>> = {};
   const weekTotals: Record<number, number> = {};
   const chemicalTotals: Record<string, number> = {};
+  const polyChemicalTotals: Record<string, number> = {};
+  const isoChemicalTotals: Record<string, number> = {};
   let grandTotal = 0;
+  let polyGrandTotal = 0;
+  let isoGrandTotal = 0;
 
   for (const week of weeks) {
     const byChemical: Record<string, number> = {};
+    const polyByChemical: Record<string, number> = {};
+    const isoByChemical: Record<string, number> = {};
     let weekTotal = 0;
 
     for (const chemical of chemicals) {
@@ -239,14 +254,26 @@ export async function fetchSavingReport(
       const balance = round2(polyBalance + isoBalance);
 
       byChemical[chemical] = balance;
+      polyByChemical[chemical] = polyBalance;
+      isoByChemical[chemical] = isoBalance;
       weekTotal += balance;
       chemicalTotals[chemical] = round2(
         (chemicalTotals[chemical] ?? 0) + balance
       );
+      polyChemicalTotals[chemical] = round2(
+        (polyChemicalTotals[chemical] ?? 0) + polyBalance
+      );
+      isoChemicalTotals[chemical] = round2(
+        (isoChemicalTotals[chemical] ?? 0) + isoBalance
+      );
+      polyGrandTotal += polyBalance;
+      isoGrandTotal += isoBalance;
     }
 
     weekTotal = round2(weekTotal);
     balances[week] = byChemical;
+    polyBalances[week] = polyByChemical;
+    isoBalances[week] = isoByChemical;
     weekTotals[week] = weekTotal;
     grandTotal += weekTotal;
   }
@@ -268,9 +295,15 @@ export async function fetchSavingReport(
       weeks,
       chemicals,
       balances,
+      polyBalances,
+      isoBalances,
       weekTotals,
       chemicalTotals,
+      polyChemicalTotals,
+      isoChemicalTotals,
       grandTotal: round2(grandTotal),
+      polyGrandTotal: round2(polyGrandTotal),
+      isoGrandTotal: round2(isoGrandTotal),
       weekRange,
     },
   };

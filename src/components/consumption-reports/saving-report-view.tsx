@@ -17,6 +17,26 @@ import {
 } from '@/app/dashboard/consumption-reports/saving-actions';
 import { downloadSavingReportPdf } from './saving-report-pdf';
 
+const MATERIALS = ['poly', 'iso'] as const;
+type SavingMaterial = (typeof MATERIALS)[number];
+
+const MATERIAL_LABELS: Record<SavingMaterial, string> = {
+  poly: 'Poly',
+  iso: 'ISO',
+};
+
+/** Colour hint for a material group, matching the Weekly Report. */
+const GROUP_STYLES: Record<SavingMaterial, { head: string; cell: string }> = {
+  poly: {
+    head: 'bg-sheet-600 text-white',
+    cell: 'bg-sheet-50/40',
+  },
+  iso: {
+    head: 'bg-emerald-700 text-white',
+    cell: 'bg-emerald-50/40',
+  },
+};
+
 /** Formats a weight with 2 decimals and thousands separators. */
 function kg(value: number): string {
   if (!Number.isFinite(value)) return '-';
@@ -205,24 +225,54 @@ export function SavingReportView() {
           </div>
 
           <div className="overflow-x-auto border border-navy-100 rounded-xl">
-            <table className="w-full text-sm border-collapse">
+            <table className="w-full border-collapse text-sm">
+              <caption className="sr-only">
+                Per chemical, for {report.year}: Poly and ISO balances for each
+                ISO week.
+              </caption>
               <thead>
                 <tr className="bg-navy-50">
-                  <th scope="col" className="px-4 py-3 text-left text-navy-600 font-semibold border-b border-navy-100">
+                  <th
+                    scope="col"
+                    rowSpan={2}
+                    className="border-b border-navy-100 px-4 py-3 text-left font-semibold text-navy-600"
+                  >
                     Week
                   </th>
                   {report.chemicals.map((chemical) => (
                     <th
                       key={chemical}
-                      scope="col"
-                      className="px-4 py-3 text-right text-navy-600 font-semibold border-b border-navy-100"
+                      scope="colgroup"
+                      colSpan={2}
+                      className="border-b border-l border-navy-100 px-4 py-3 text-center font-semibold text-navy-600"
                     >
                       {chemical}
                     </th>
                   ))}
-                  <th scope="col" className="px-4 py-3 text-right text-navy-600 font-semibold border-b border-navy-100">
+                  <th
+                    scope="col"
+                    rowSpan={2}
+                    className="border-b border-l border-navy-100 px-4 py-3 text-right font-semibold text-navy-600"
+                  >
                     Total
                   </th>
+                </tr>
+                <tr className="bg-navy-50">
+                  {report.chemicals.flatMap((chemical) =>
+                    MATERIALS.map((kind) => (
+                      <th
+                        key={`${chemical}-${kind}`}
+                        scope="col"
+                        className={[
+                          'border-b border-navy-100 px-4 py-2 text-right text-[10px] font-semibold tracking-wider uppercase',
+                          GROUP_STYLES[kind].head,
+                          kind === 'poly' ? 'border-l border-navy-100' : '',
+                        ].join(' ')}
+                      >
+                        {MATERIAL_LABELS[kind]}
+                      </th>
+                    ))
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -235,18 +285,30 @@ export function SavingReportView() {
                         {report.weekRange[week].end}
                       </span>
                     </td>
-                    {report.chemicals.map((chemical) => (
-                      <td
-                        key={chemical}
-                        className={[
-                          'px-4 py-3 text-right tabular-nums',
-                          balanceClasses(report.balances[week][chemical]),
-                        ].join(' ')}
-                      >
-                        {kg(report.balances[week][chemical])}
-                      </td>
-                    ))}
-                    <td className="px-4 py-3 text-right font-semibold tabular-nums border-t border-navy-200">
+                    {report.chemicals.flatMap((chemical) =>
+                      MATERIALS.map((kind) => {
+                        const balance = (
+                          kind === 'poly'
+                            ? report.polyBalances
+                            : report.isoBalances
+                        )[week][chemical];
+
+                        return (
+                          <td
+                            key={`${chemical}-${kind}`}
+                            className={[
+                              'px-4 py-3 text-right tabular-nums',
+                              GROUP_STYLES[kind].cell,
+                              kind === 'poly' ? 'border-l border-navy-100' : '',
+                              balanceClasses(balance),
+                            ].join(' ')}
+                          >
+                            {kg(balance)}
+                          </td>
+                        );
+                      })
+                    )}
+                    <td className="border-l border-t border-navy-200 px-4 py-3 text-right font-semibold tabular-nums">
                       {kg(report.weekTotals[week])}
                     </td>
                   </tr>
@@ -254,15 +316,25 @@ export function SavingReportView() {
                 {/* Totals row: total balance per chemical and grand total */}
                 <tr className="border-t border-navy-200 bg-navy-50/60 text-navy-900">
                   <td className="px-4 py-3 font-semibold">Total</td>
-                  {report.chemicals.map((chemical) => (
-                    <td
-                      key={chemical}
-                      className="px-4 py-3 text-right tabular-nums font-semibold"
-                    >
-                      {kg(report.chemicalTotals[chemical])}
-                    </td>
-                  ))}
-                  <td className="px-4 py-3 text-right tabular-nums font-semibold border-l border-navy-200">
+                  {report.chemicals.flatMap((chemical) =>
+                    MATERIALS.map((kind) => (
+                      <td
+                        key={`${chemical}-${kind}`}
+                        className={[
+                          'px-4 py-3 text-right font-semibold tabular-nums',
+                          GROUP_STYLES[kind].cell,
+                          kind === 'poly' ? 'border-l border-navy-100' : '',
+                        ].join(' ')}
+                      >
+                        {kg(
+                          (kind === 'poly'
+                            ? report.polyChemicalTotals
+                            : report.isoChemicalTotals)[chemical]
+                        )}
+                      </td>
+                    ))
+                  )}
+                  <td className="border-l border-navy-200 px-4 py-3 text-right font-semibold tabular-nums">
                     {kg(report.grandTotal)}
                   </td>
                 </tr>
@@ -272,8 +344,9 @@ export function SavingReportView() {
 
           <p className="text-[11px] leading-relaxed text-navy-400">
             <span className="font-medium">Balance</span> = MRN &minus; usage for
-            the week. <span className="font-medium">MRN</span> is the quantity
-            recorded in MRN Input for the week (Poly + ISO boxes).{' '}
+            the week, shown separately for Poly and ISO.{' '}
+            <span className="font-medium">MRN</span> is the quantity recorded
+            in MRN Input for the week (Poly and ISO boxes).{' '}
             <span className="font-medium">Usage</span> is the loading records
             for the same ISO week in Sri Lanka time, using the Weekly Report
             formula{' '}

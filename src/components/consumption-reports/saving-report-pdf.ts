@@ -1,5 +1,19 @@
 import type { SavingReportResult } from '@/app/dashboard/consumption-reports/saving-actions';
 
+const MATERIALS = ['poly', 'iso'] as const;
+type SavingMaterial = (typeof MATERIALS)[number];
+
+const MATERIAL_LABELS: Record<SavingMaterial, string> = {
+  poly: 'Poly',
+  iso: 'ISO',
+};
+
+/** Material-group colours, matching the on-screen Saving Report table. */
+const GROUP_FILLS: Record<SavingMaterial, readonly [number, number, number]> = {
+  poly: [51, 86, 149], // sheet-600 #335695
+  iso: [4, 120, 87], // emerald-700 #047857
+};
+
 /** Formats a weight with 2 decimals, matching the on-screen table. */
 function kg(value: number): string {
   if (!Number.isFinite(value)) return '-';
@@ -16,7 +30,7 @@ function kg(value: number): string {
  * only paid when the user actually downloads, never on first page load.
  *
  * Layout mirrors the on-screen table: one row per ISO week of the selected
- * year, one column per chemical with its balance (MRN &minus; usage), plus a
+ * year, with Poly and ISO balances shown separately for each chemical, plus a
  * week total column and a final totals row.
  */
 export async function downloadSavingReportPdf(
@@ -54,40 +68,86 @@ export async function downloadSavingReportPdf(
     78
   );
 
+  doc.text(
+    `Poly balance: ${kg(report.polyGrandTotal)} kg   ISO balance: ${kg(
+      report.isoGrandTotal
+    )} kg`,
+    40,
+    92
+  );
+
   // ------------------------------------------------------------ Table
   type Row = (string | number)[];
 
-  const header: string[] = ['Week', ...report.chemicals, 'Total'];
   const chemicalCount = report.chemicals.length;
+  const balanceColumnCount = chemicalCount * 2;
+  const totalColumnIndex = balanceColumnCount + 1;
+
+  const head = [
+    [
+      { content: 'Week', rowSpan: 2, styles: { valign: 'middle' as const } },
+      ...report.chemicals.map((chemical) => ({
+        content: chemical,
+        colSpan: 2,
+        styles: { halign: 'center' as const },
+      })),
+      {
+        content: 'Total',
+        rowSpan: 2,
+        styles: { halign: 'right' as const, valign: 'middle' as const },
+      },
+    ],
+    report.chemicals.flatMap(() =>
+      MATERIALS.map((kind) => ({
+        content: MATERIAL_LABELS[kind],
+        styles: {
+          halign: 'center' as const,
+          fillColor: [...GROUP_FILLS[kind]] as [number, number, number],
+        },
+      }))
+    ),
+  ];
 
   const body: Row[] = report.weeks.map((week) => [
     `Week ${week}`,
-    ...report.chemicals.map((chemical) =>
-      kg(report.balances[week][chemical])
+    ...report.chemicals.flatMap((chemical) =>
+      MATERIALS.map((kind) =>
+        kg(
+          (kind === 'poly'
+            ? report.polyBalances
+            : report.isoBalances)[week][chemical]
+        )
+      )
     ),
     kg(report.weekTotals[week]),
   ]);
 
   const totalRow: Row = [
     'Total',
-    ...report.chemicals.map((chemical) =>
-      kg(report.chemicalTotals[chemical])
+    ...report.chemicals.flatMap((chemical) =>
+      MATERIALS.map((kind) =>
+        kg(
+          (kind === 'poly'
+            ? report.polyChemicalTotals
+            : report.isoChemicalTotals)[chemical]
+        )
+      )
     ),
     kg(report.grandTotal),
   ];
 
-  // Column styles: Week left-aligned and bold, chemical columns right-aligned,
-  // the Total column right-aligned and bold.
+  // Column styles: Week left-aligned and bold, chemical balance columns
+  // right-aligned, the Total column right-aligned and bold.
   type ColumnStyle = { halign: 'left' | 'center' | 'right'; fontStyle?: 'normal' | 'bold' };
   const columnStyles: Record<string, ColumnStyle> = { '0': { halign: 'left', fontStyle: 'bold' } };
-  for (let i = 1; i <= chemicalCount; i += 1) {
+  for (let i = 1; i <= balanceColumnCount; i += 1) {
     columnStyles[String(i)] = { halign: 'right' };
   }
-  columnStyles[String(chemicalCount + 1)] = { halign: 'right', fontStyle: 'bold' };
+  columnStyles[String(totalColumnIndex)] = { halign: 'right', fontStyle: 'bold' };
 
   autoTable(doc, {
-    startY: 100,
-    head: [header],
+    startY: 112,
+    head,
     body,
     foot: [totalRow],
     theme: 'grid',
@@ -107,9 +167,9 @@ export async function downloadSavingReportPdf(
     // Negative balances read in red, matching the on-screen table.
     didParseCell: (data) => {
       if (
-        data.section === 'body' &&
+        (data.section === 'body' || data.section === 'foot') &&
         data.column.index > 0 &&
-        data.column.index <= chemicalCount
+        data.column.index <= balanceColumnCount
       ) {
         const value = Number(String(data.cell.raw).replace(/,/g, ''));
         if (Number.isFinite(value) && value < 0) {
