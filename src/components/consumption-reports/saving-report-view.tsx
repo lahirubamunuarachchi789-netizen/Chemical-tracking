@@ -53,6 +53,21 @@ function balanceClasses(balance: number): string {
   return 'text-navy-600';
 }
 
+/**
+ * Sum a chemical's per-week balances for the weeks on screen, so the Total row
+ * always matches the visible rows exactly.
+ */
+function sumWeeks(
+  balances: Record<number, Record<string, number>>,
+  weeks: number[],
+  chemical: string
+): number {
+  return weeks.reduce(
+    (total, week) => total + (balances[week]?.[chemical] ?? 0),
+    0
+  );
+}
+
 export function SavingReportView() {
   const currentYear = new Date().getFullYear();
 
@@ -249,13 +264,6 @@ export function SavingReportView() {
                       {chemical}
                     </th>
                   ))}
-                  <th
-                    scope="col"
-                    rowSpan={2}
-                    className="border-b border-l border-navy-100 px-4 py-3 text-right font-semibold text-navy-600"
-                  >
-                    Total
-                  </th>
                 </tr>
                 <tr className="bg-navy-50">
                   {report.chemicals.flatMap((chemical) =>
@@ -308,12 +316,9 @@ export function SavingReportView() {
                         );
                       })
                     )}
-                    <td className="border-l border-t border-navy-200 px-4 py-3 text-right font-semibold tabular-nums">
-                      {kg(report.weekTotals[week])}
-                    </td>
                   </tr>
                 ))}
-                {/* Totals row: total balance per chemical and grand total */}
+                {/* Totals row: total balance per chemical, by material */}
                 <tr className="border-t border-navy-200 bg-navy-50/60 text-navy-900">
                   <td className="px-4 py-3 font-semibold">Total</td>
                   {report.chemicals.flatMap((chemical) =>
@@ -327,16 +332,17 @@ export function SavingReportView() {
                         ].join(' ')}
                       >
                         {kg(
-                          (kind === 'poly'
-                            ? report.polyChemicalTotals
-                            : report.isoChemicalTotals)[chemical]
+                          sumWeeks(
+                            kind === 'poly'
+                              ? report.polyBalances
+                              : report.isoBalances,
+                            report.weeks,
+                            chemical
+                          )
                         )}
                       </td>
                     ))
                   )}
-                  <td className="border-l border-navy-200 px-4 py-3 text-right font-semibold tabular-nums">
-                    {kg(report.grandTotal)}
-                  </td>
                 </tr>
               </tbody>
             </table>

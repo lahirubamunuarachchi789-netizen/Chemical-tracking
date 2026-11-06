@@ -24,6 +24,21 @@ function kg(value: number): string {
 }
 
 /**
+ * Sum a chemical's per-week balances for the weeks in the report, so the Total
+ * row matches the visible rows exactly.
+ */
+function sumWeeks(
+  balances: Record<number, Record<string, number>>,
+  weeks: number[],
+  chemical: string
+): number {
+  return weeks.reduce(
+    (total, week) => total + (balances[week]?.[chemical] ?? 0),
+    0
+  );
+}
+
+/**
  * Build and save the saving report as a PDF.
  *
  * jsPDF and the autoTable plugin are imported dynamically so their weight is
@@ -31,7 +46,7 @@ function kg(value: number): string {
  *
  * Layout mirrors the on-screen table: one row per ISO week of the selected
  * year, with Poly and ISO balances shown separately for each chemical, plus a
- * week total column and a final totals row.
+ * final totals row.
  */
 export async function downloadSavingReportPdf(
   report: SavingReportResult
@@ -81,7 +96,6 @@ export async function downloadSavingReportPdf(
 
   const chemicalCount = report.chemicals.length;
   const balanceColumnCount = chemicalCount * 2;
-  const totalColumnIndex = balanceColumnCount + 1;
 
   const head = [
     [
@@ -91,11 +105,6 @@ export async function downloadSavingReportPdf(
         colSpan: 2,
         styles: { halign: 'center' as const },
       })),
-      {
-        content: 'Total',
-        rowSpan: 2,
-        styles: { halign: 'right' as const, valign: 'middle' as const },
-      },
     ],
     report.chemicals.flatMap(() =>
       MATERIALS.map((kind) => ({
@@ -119,7 +128,6 @@ export async function downloadSavingReportPdf(
         )
       )
     ),
-    kg(report.weekTotals[week]),
   ]);
 
   const totalRow: Row = [
@@ -127,23 +135,23 @@ export async function downloadSavingReportPdf(
     ...report.chemicals.flatMap((chemical) =>
       MATERIALS.map((kind) =>
         kg(
-          (kind === 'poly'
-            ? report.polyChemicalTotals
-            : report.isoChemicalTotals)[chemical]
+          sumWeeks(
+            kind === 'poly' ? report.polyBalances : report.isoBalances,
+            report.weeks,
+            chemical
+          )
         )
       )
     ),
-    kg(report.grandTotal),
   ];
 
   // Column styles: Week left-aligned and bold, chemical balance columns
-  // right-aligned, the Total column right-aligned and bold.
+  // right-aligned.
   type ColumnStyle = { halign: 'left' | 'center' | 'right'; fontStyle?: 'normal' | 'bold' };
   const columnStyles: Record<string, ColumnStyle> = { '0': { halign: 'left', fontStyle: 'bold' } };
   for (let i = 1; i <= balanceColumnCount; i += 1) {
     columnStyles[String(i)] = { halign: 'right' };
   }
-  columnStyles[String(totalColumnIndex)] = { halign: 'right', fontStyle: 'bold' };
 
   autoTable(doc, {
     startY: 112,

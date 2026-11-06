@@ -230,11 +230,7 @@ export async function fetchSavingReport(
   const isoBalances: Record<number, Record<string, number>> = {};
   const weekTotals: Record<number, number> = {};
   const chemicalTotals: Record<string, number> = {};
-  const polyChemicalTotals: Record<string, number> = {};
-  const isoChemicalTotals: Record<string, number> = {};
   let grandTotal = 0;
-  let polyGrandTotal = 0;
-  let isoGrandTotal = 0;
 
   for (const week of weeks) {
     const byChemical: Record<string, number> = {};
@@ -260,14 +256,6 @@ export async function fetchSavingReport(
       chemicalTotals[chemical] = round2(
         (chemicalTotals[chemical] ?? 0) + balance
       );
-      polyChemicalTotals[chemical] = round2(
-        (polyChemicalTotals[chemical] ?? 0) + polyBalance
-      );
-      isoChemicalTotals[chemical] = round2(
-        (isoChemicalTotals[chemical] ?? 0) + isoBalance
-      );
-      polyGrandTotal += polyBalance;
-      isoGrandTotal += isoBalance;
     }
 
     weekTotal = round2(weekTotal);
@@ -276,6 +264,29 @@ export async function fetchSavingReport(
     isoBalances[week] = isoByChemical;
     weekTotals[week] = weekTotal;
     grandTotal += weekTotal;
+  }
+
+  // ---- Per-material totals -----------------------------------------------
+  // Derived from the same per-week balances the table renders, so the Total
+  // row is always the exact sum of the visible Poly and ISO columns.
+  const polyChemicalTotals: Record<string, number> = {};
+  const isoChemicalTotals: Record<string, number> = {};
+  let polyGrandTotal = 0;
+  let isoGrandTotal = 0;
+
+  for (const chemical of chemicals) {
+    let polyTotal = 0;
+    let isoTotal = 0;
+
+    for (const week of weeks) {
+      polyTotal += polyBalances[week][chemical] ?? 0;
+      isoTotal += isoBalances[week][chemical] ?? 0;
+    }
+
+    polyChemicalTotals[chemical] = round2(polyTotal);
+    isoChemicalTotals[chemical] = round2(isoTotal);
+    polyGrandTotal += polyTotal;
+    isoGrandTotal += isoTotal;
   }
 
   // ---- Week date ranges (Sri Lanka time) --------------------------------
