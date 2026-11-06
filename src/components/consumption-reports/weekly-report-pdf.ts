@@ -2,6 +2,7 @@ import type { WeeklyReportResult } from '@/lib/consumption-reports';
 
 /** Formats a weight with 2 decimals, matching the on-screen table. */
 function kg(value: number): string {
+  if (!Number.isFinite(value)) return '-';
   return value.toLocaleString('en-LK', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
