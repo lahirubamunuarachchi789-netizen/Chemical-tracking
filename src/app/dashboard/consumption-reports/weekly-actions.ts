@@ -8,6 +8,7 @@ import {
   emptyMaterialUsage,
   getSLDateParts,
   materialFromTank,
+  toFiniteNumber,
   type MaterialKind,
   type WeeklyMaterialUsage,
   type WeeklyReportResult,
@@ -17,8 +18,9 @@ import { NO_CHEMICAL } from '@/lib/chemical-usage';
 /** A row from MRNRecords, as far as the weekly report needs it. */
 interface MrnRow {
   Chemical: string | null;
-  Poly: number | null;
-  ISO: number | null;
+  // PostgREST may serialise numeric columns as strings, so accept both.
+  Poly: number | string | null;
+  ISO: number | string | null;
   week: number | null;
 }
 
@@ -145,10 +147,14 @@ export async function fetchWeeklyReport(
     if (!chemical || chemical === NO_CHEMICAL) continue;
 
     for (const kind of ['poly', 'iso'] as const) {
-      const weight = kind === 'poly' ? row.Poly : row.ISO;
+      const rawWeight = kind === 'poly' ? row.Poly : row.ISO;
       // A set may record only one of the two materials; skip empty sides so
       // they do not count as a zero MRN entry.
-      if (weight === null || weight === undefined) continue;
+      if (rawWeight === null || rawWeight === undefined) continue;
+
+      // Coerce before adding: a numeric string would otherwise concatenate
+      // when several sets share a chemical, instead of summing.
+      const weight = toFiniteNumber(rawWeight);
 
       add(accumulators[kind].mrn, chemical, weight);
       bump(accumulators[kind].mrnSets, chemical);

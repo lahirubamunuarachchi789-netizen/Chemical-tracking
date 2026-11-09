@@ -35,6 +35,20 @@ export function toSriLankaTime(timestamp: string | Date): Date {
   return new Date(timestamp);
 }
 
+/**
+ * Coerce a database numeric value to a finite number.
+ *
+ * PostgREST can return `numeric` columns as strings. Left as-is, `0 + "5.5"`
+ * concatenates to "05.5", so MRN weights must be coerced before they are
+ * summed. Anything non-finite falls back to 0.
+ */
+export function toFiniteNumber(
+  value: number | string | null | undefined
+): number {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 /** Extract Sri Lanka-local date parts from a timestamp. */
 export function getSLDateParts(timestamp: string | Date): SLDateParts {
   const date = new Date(timestamp);
@@ -109,12 +123,17 @@ export interface ConsumptionFilters {
  * Null weights are treated as 0.
  */
 export function calculateRecordUsage(record: {
-  AfterWeight: number | null;
-  BeforeWeight: number | null;
-  StartWeight: number | null;
-  EndWeight: number | null;
+  AfterWeight: number | string | null;
+  BeforeWeight: number | string | null;
+  StartWeight: number | string | null;
+  EndWeight: number | string | null;
 }): number {
-  return ((record.AfterWeight ?? 0) - (record.BeforeWeight ?? 0) + (record.StartWeight ?? 0)) - (record.EndWeight ?? 0);
+  return (
+    toFiniteNumber(record.AfterWeight) -
+    toFiniteNumber(record.BeforeWeight) +
+    toFiniteNumber(record.StartWeight) -
+    toFiniteNumber(record.EndWeight)
+  );
 }
 
 /** Usage intensity tier for colour coding. */

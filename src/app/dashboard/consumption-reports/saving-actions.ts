@@ -5,14 +5,16 @@ import {
   calculateRecordUsage,
   getSLDateParts,
   materialFromTank,
+  toFiniteNumber,
 } from '@/lib/consumption-reports';
 import { NO_CHEMICAL } from '@/lib/chemical-usage';
 
 /** A row from MRNRecords, as far as the saving report needs it. */
 interface MrnRow {
   Chemical: string | null;
-  Poly: number | null;
-  ISO: number | null;
+  // PostgREST may serialise numeric columns as strings, so accept both.
+  Poly: number | string | null;
+  ISO: number | string | null;
   week: number | null;
 }
 
@@ -146,7 +148,7 @@ export async function fetchSavingReport(
         byChemical = new Map();
         polyMrnByWeek.set(week, byChemical);
       }
-      add(byChemical, chemical, row.Poly);
+      add(byChemical, chemical, toFiniteNumber(row.Poly));
     }
 
     // ISO MRN (matches Weekly Report: only non-null ISO weights count)
@@ -156,7 +158,7 @@ export async function fetchSavingReport(
         byChemical = new Map();
         isoMrnByWeek.set(week, byChemical);
       }
-      add(byChemical, chemical, row.ISO);
+      add(byChemical, chemical, toFiniteNumber(row.ISO));
     }
   }
 
