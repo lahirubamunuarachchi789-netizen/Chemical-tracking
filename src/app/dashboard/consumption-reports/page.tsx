@@ -11,7 +11,7 @@ export default function ConsumptionReportsPage() {
     <div className="mx-auto max-w-6xl">
       <PageHeader
         title="Consumption Reports"
-        description="Review daily chemical consumption by injector, tank and chemical, the weekly Poly and ISO balance, and the yearly saving balance by chemical, all in Sri Lanka time."
+        description="Review daily chemical consumption by material (Poly or ISO) and chemical, the weekly Poly and ISO balance, and the yearly saving balance by chemical, all in Sri Lanka time."
         icon={Activity}
       />
 

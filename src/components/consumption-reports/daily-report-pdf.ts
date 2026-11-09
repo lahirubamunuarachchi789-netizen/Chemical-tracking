@@ -11,8 +11,9 @@ function kg(value: number): string {
 /** Human-readable summary of the filters that produced this report. */
 function describeFilters(filters: ConsumptionFilters): string {
   const parts = [
-    filters.injector ? `Injector ${filters.injector}` : null,
-    filters.tank ? `Tank ${filters.tank}` : null,
+    filters.material
+      ? `Material ${filters.material.charAt(0).toUpperCase() + filters.material.slice(1)}`
+      : null,
     filters.chemical ? `Chemical ${filters.chemical}` : null,
     filters.week ? `Week ${filters.week}` : null,
     filters.year ? `Year ${filters.year}` : null,

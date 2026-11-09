@@ -4,7 +4,9 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import {
   getSLDateParts,
   calculateRecordUsage,
+  materialFromTank,
   type DailyUsage,
+  type MaterialKind,
   type SLDateParts,
 } from '@/lib/consumption-reports';
 
@@ -48,15 +50,13 @@ export interface DailyRecordsResult {
  */
 export async function fetchDailyRecords({
   date,
-  injector,
-  tank,
+  material,
   chemical,
   week,
   year,
 }: {
   date: string; // YYYY-MM-DD in Sri Lanka time
-  injector?: string;
-  tank?: string;
+  material?: MaterialKind;
   chemical?: string;
   week?: number;
   year?: number;
@@ -70,12 +70,6 @@ export async function fetchDailyRecords({
     )
     .order('CreatedAt', { ascending: true });
 
-  if (injector) {
-    query = query.eq('RangeCode', injector);
-  }
-  if (tank) {
-    query = query.eq('LineCode', tank);
-  }
   if (chemical) {
     query = query.eq('Chemical', chemical);
   }
@@ -88,15 +82,16 @@ export async function fetchDailyRecords({
 
   const records = (data ?? []) as DailyRecord[];
 
-  // Match the report's scoping: same Sri Lanka date, and the same year/week
-  // the user searched with, so the detail view never shows records the
-  // report itself excluded.
+  // Match the report's scoping: same Sri Lanka date, the same year/week the
+  // user searched with, and the same material, so the detail view never shows
+  // records the report itself excluded.
   const filtered = records.filter((record) => {
     try {
       const parts = getSLDateParts(record.CreatedAt);
       if (parts.isoDate !== date) return false;
       if (year && parts.year !== year) return false;
       if (week && parts.week !== week) return false;
+      if (material && materialFromTank(record.LineCode) !== material) return false;
       return true;
     } catch {
       return false;
@@ -115,8 +110,7 @@ export async function fetchDailyRecords({
  *   [(AfterWeight - BeforeWeight) + StartWeight] - EndWeight
  */
 export async function fetchConsumptionReport(filters: {
-  injector?: string;
-  tank?: string;
+  material?: MaterialKind;
   chemical?: string;
   week?: number;
   year?: number;
@@ -130,12 +124,6 @@ export async function fetchConsumptionReport(filters: {
     )
     .order('CreatedAt', { ascending: true });
 
-  if (filters.injector) {
-    query = query.eq('RangeCode', filters.injector);
-  }
-  if (filters.tank) {
-    query = query.eq('LineCode', filters.tank);
-  }
   if (filters.chemical) {
     query = query.eq('Chemical', filters.chemical);
   }
@@ -153,6 +141,7 @@ export async function fetchConsumptionReport(filters: {
     const parts = getSLDateParts(record.CreatedAt);
     if (filters.year && parts.year !== filters.year) return false;
     if (filters.week && parts.week !== filters.week) return false;
+    if (filters.material && materialFromTank(record.LineCode) !== filters.material) return false;
     return true;
   });
 

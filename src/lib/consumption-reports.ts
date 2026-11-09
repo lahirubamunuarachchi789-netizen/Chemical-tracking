@@ -97,8 +97,8 @@ const weekNum = Math.ceil((daysSinceJan1 + 1) / 7);
 
 /** Filter options for the consumption report. */
 export const CONSUMPTION_FILTERS = {
-  injectors: ['RGE 01', 'RGE 02'],
-  tanks: ['A1', 'B1', 'A2', 'B2'],
+  // Material kind: A tanks hold Poly, B tanks hold ISO.
+  materials: ['Poly', 'ISO'],
   chemicals: [...chemicals],
   weeks: Array.from({ length: 53 }, (_, i) => i + 1),
   years: (): number[] => {
@@ -110,8 +110,8 @@ export const CONSUMPTION_FILTERS = {
 
 /** Shape of the filter values submitted from the search form. */
 export interface ConsumptionFilters {
-  injector?: string;
-  tank?: string;
+  /** Material kind: Poly (A tanks) or ISO (B tanks). */
+  material?: MaterialKind;
   chemical?: string;
   week?: number;
   year?: number;

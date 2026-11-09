@@ -62,8 +62,7 @@ export function ConsumptionReportView() {
         // the records behind this card (not every record for the date).
         const response = await fetchDailyRecords({
           date: day.date,
-          injector: activeFilters.injector,
-          tank: activeFilters.tank,
+          material: activeFilters.material,
           chemical: activeFilters.chemical,
           week: activeFilters.week,
           year: activeFilters.year,
@@ -205,7 +204,7 @@ export function ConsumptionReportView() {
           <AlertCircle className="mx-auto h-10 w-10 text-navy-300" aria-hidden="true" />
           <h3 className="mt-4 text-lg font-semibold text-navy-900">Data Not Found</h3>
           <p className="mt-1 text-sm text-navy-500">
-            No consumption data found for the selected filters. Try adjusting the injector, tank, chemical, week or year filters.
+            No consumption data found for the selected filters. Try adjusting the material, chemical, week or year filters.
           </p>
         </section>
       )}

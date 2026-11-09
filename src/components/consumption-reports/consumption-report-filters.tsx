@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import {
-  Building2,
-  Database,
+  Package,
   FlaskConical,
   Calendar,
   List,
@@ -17,8 +16,7 @@ import {
 } from '@/lib/consumption-reports';
 
 const icons: Record<string, React.ElementType> = {
-  injector: Building2,
-  tank: Database,
+  material: Package,
   chemical: FlaskConical,
   week: Calendar,
   year: List,
@@ -27,7 +25,7 @@ const icons: Record<string, React.ElementType> = {
 /**
  * Consumption report filter panel.
  *
- * Five dropdowns (Injector, Tank, Chemical, Week, Year) plus a Search button.
+ * Four dropdowns (Material, Chemical, Week, Year) plus a Search button.
  * Emits the selected filters via onSearch when the user clicks Search.
  */
 export function ConsumptionReportFilters({
@@ -35,8 +33,7 @@ export function ConsumptionReportFilters({
 }: {
   onSearch: (filters: ConsumptionFilters) => void;
 }) {
-  const [injector, setInjector] = useState('');
-  const [tank, setTank] = useState('');
+  const [material, setMaterial] = useState('');
   const [chemical, setChemical] = useState('');
   const [week, setWeek] = useState('');
   const [year, setYear] = useState(String(new Date().getFullYear()));
@@ -44,9 +41,10 @@ export function ConsumptionReportFilters({
   const years = CONSUMPTION_FILTERS.years();
 
   function handleSearch() {
+    const materialFilter =
+      material === 'Poly' ? 'poly' : material === 'ISO' ? 'iso' : undefined;
     onSearch({
-      injector: injector || undefined,
-      tank: tank || undefined,
+      material: materialFilter,
       chemical: chemical || undefined,
       week: week ? parseInt(week, 10) : undefined,
       year: year ? parseInt(year, 10) : undefined,
@@ -68,18 +66,11 @@ export function ConsumptionReportFilters({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-5 sm:p-6">
         {[
           {
-            key: 'injector',
-            label: 'Injector',
-            options: CONSUMPTION_FILTERS.injectors,
-            value: injector,
-            onChange: setInjector,
-          },
-          {
-            key: 'tank',
-            label: 'Tank',
-            options: CONSUMPTION_FILTERS.tanks,
-            value: tank,
-            onChange: setTank,
+            key: 'material',
+            label: 'Material',
+            options: CONSUMPTION_FILTERS.materials,
+            value: material,
+            onChange: setMaterial,
           },
           {
             key: 'chemical',
