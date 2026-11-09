@@ -58,32 +58,6 @@ export async function downloadWeeklyReportPdf(
     62
   );
 
-  // Totals summary line. Each material's label is set in its group colour so
-  // the blue/green split is obvious even before the table.
-  doc.setFontSize(9);
-  const summaryY = 78;
-  doc.setTextColor(...GROUP_FILLS.poly);
-  doc.text('Poly:', 40, summaryY);
-  doc.setTextColor(100, 116, 139);
-  doc.text(
-    `MRN ${kg(report.totals.poly.mrn)} kg · Usage ${kg(
-      report.totals.poly.totalUsage
-    )} kg · Balance ${kg(report.totals.poly.balance)} kg`,
-    40 + doc.getTextWidth('Poly: '),
-    summaryY
-  );
-
-  doc.setTextColor(...GROUP_FILLS.iso);
-  doc.text('ISO:', 40, summaryY + 14);
-  doc.setTextColor(100, 116, 139);
-  doc.text(
-    `MRN ${kg(report.totals.iso.mrn)} kg · Usage ${kg(
-      report.totals.iso.totalUsage
-    )} kg · Balance ${kg(report.totals.iso.balance)} kg`,
-    40 + doc.getTextWidth('ISO:  '),
-    summaryY + 14
-  );
-
   // ------------------------------------------------------------ Table
   type Row = (string | number)[];
 
@@ -162,17 +136,6 @@ export async function downloadWeeklyReportPdf(
   });
 
   // ------------------------------------------------------------ Footer
-  const finalY =
-    (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable
-      ?.finalY ?? 0;
-
-  doc.setFontSize(8);
-  doc.setTextColor(148, 163, 184);
-  const note = doc.splitTextToSize(
-    'MRN is the quantity recorded in MRN Input for this week. Usage is the loading records for the same week, split by tank type: A tanks (A1, A2) count towards Poly, B tanks (B1, B2) towards ISO, using [(After - Before) + Start] - End. Balance = MRN - usage; a negative balance means more was consumed than recorded.',
-    pageWidth - 80
-  );
-  doc.text(note, 40, Math.min(finalY + 24, doc.internal.pageSize.getHeight() - 60));
 
   // Page numbers
   const pageCount = doc.getNumberOfPages();
