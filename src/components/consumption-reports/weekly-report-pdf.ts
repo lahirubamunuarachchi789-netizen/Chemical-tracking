@@ -89,7 +89,7 @@ export async function downloadWeeklyReportPdf(
     body,
     foot: [totalRow],
     theme: 'grid',
-    styles: { fontSize: 9, cellPadding: 5, textColor: [30, 41, 59] },
+    styles: { fontSize: 9, cellPadding: 5, halign: 'center', textColor: [30, 41, 59] },
     // Only the Chemical column stays neutral; each material group gets its own
     // header colour in didParseCell below.
     headStyles: {
@@ -102,15 +102,16 @@ export async function downloadWeeklyReportPdf(
       fillColor: [241, 245, 249],
       textColor: [15, 23, 42],
       fontStyle: 'bold',
+      halign: 'center',
     },
     columnStyles: {
-      0: { halign: 'left', fontStyle: 'bold', cellWidth: 150 },
-      1: { halign: 'right' },
-      2: { halign: 'right' },
-      3: { halign: 'right' },
-      4: { halign: 'right' },
-      5: { halign: 'right' },
-      6: { halign: 'right' },
+      0: { halign: 'center', fontStyle: 'bold', cellWidth: 150 },
+      1: { halign: 'center' },
+      2: { halign: 'center' },
+      3: { halign: 'center' },
+      4: { halign: 'center' },
+      5: { halign: 'center' },
+      6: { halign: 'center' },
     },
     // Per-material header colour, then a negative-balance cue for the body.
     didParseCell: (data) => {

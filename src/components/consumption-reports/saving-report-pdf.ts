@@ -73,24 +73,6 @@ export async function downloadSavingReportPdf(
     62
   );
 
-  doc.setFontSize(9);
-  doc.setTextColor(100, 116, 139);
-  doc.text(
-    `Weeks with data: ${report.weeks.length}   Chemicals: ${report.chemicals.length}   Grand total balance: ${kg(
-      report.grandTotal
-    )} kg`,
-    40,
-    78
-  );
-
-  doc.text(
-    `Poly balance: ${kg(report.polyGrandTotal)} kg   ISO balance: ${kg(
-      report.isoGrandTotal
-    )} kg`,
-    40,
-    92
-  );
-
   // ------------------------------------------------------------ Table
   type Row = (string | number)[];
 
@@ -145,21 +127,20 @@ export async function downloadSavingReportPdf(
     ),
   ];
 
-  // Column styles: Week left-aligned and bold, chemical balance columns
-  // right-aligned.
-  type ColumnStyle = { halign: 'left' | 'center' | 'right'; fontStyle?: 'normal' | 'bold' };
-  const columnStyles: Record<string, ColumnStyle> = { '0': { halign: 'left', fontStyle: 'bold' } };
+  // All data cells, including the Total row, are center-aligned.
+  type ColumnStyle = { halign: 'center'; fontStyle?: 'normal' | 'bold' };
+  const columnStyles: Record<string, ColumnStyle> = { '0': { halign: 'center', fontStyle: 'bold' } };
   for (let i = 1; i <= balanceColumnCount; i += 1) {
-    columnStyles[String(i)] = { halign: 'right' };
+    columnStyles[String(i)] = { halign: 'center' };
   }
 
   autoTable(doc, {
-    startY: 112,
+    startY: 80,
     head,
     body,
     foot: [totalRow],
     theme: 'grid',
-    styles: { fontSize: 8.5, cellPadding: 4, textColor: [30, 41, 59], lineColor: [0, 0, 0] },
+    styles: { fontSize: 8.5, cellPadding: 4, halign: 'center', textColor: [30, 41, 59], lineColor: [0, 0, 0] },
     headStyles: {
       fillColor: [36, 66, 125],
       textColor: 255,
@@ -170,6 +151,7 @@ export async function downloadSavingReportPdf(
       fillColor: [241, 245, 249],
       textColor: [15, 23, 42],
       fontStyle: 'bold',
+      halign: 'center',
     },
     columnStyles,
     // Negative balances read in red, matching the on-screen table.
@@ -189,18 +171,6 @@ export async function downloadSavingReportPdf(
   });
 
   // ------------------------------------------------------------ Footer
-  const finalY =
-    (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable
-      ?.finalY ?? 0;
-
-  doc.setFontSize(8);
-  doc.setTextColor(148, 163, 184);
-  const note = doc.splitTextToSize(
-    'Balance = MRN - usage for the week. MRN is the quantity recorded in MRN Input for the week (Poly + ISO boxes). Usage is the loading records for the same ISO week in Sri Lanka time, using [(After - Before) + Start] - End, the same formula as the Weekly Report. A negative balance means more was consumed than recorded.',
-    pageWidth - 80
-  );
-  doc.text(note, 40, Math.min(finalY + 24, doc.internal.pageSize.getHeight() - 60));
-
   // Page numbers
   const pageCount = doc.getNumberOfPages();
   for (let i = 1; i <= pageCount; i += 1) {
